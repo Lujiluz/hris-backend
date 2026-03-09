@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: hris-postgres
+    environment:
+      POSTGRES_USER: hris_user
+      POSTGRES_PASSWORD: UdaoX6oN7om5kdTLTAsyjnXajh3os9Rev6gZO0tBnXM=
+      POSTGRES_DB: hris_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: hris-redis
+    ports:
+      - "6380:6379"
+    volumes:
+      - redisdata:/data
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hris-api
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    environment:
+      # Override localhost jadi nama service docker untuk koneksi internal
+      - DB_HOST=postgres
+      - REDIS_HOST=redis
+      - APP_PORT=${APP_PORT}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  redisdata:
