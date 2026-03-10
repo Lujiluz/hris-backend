@@ -60,7 +60,7 @@ func (uc *authUsecase) VerifyOTP(ctx context.Context, req *domain.VerifyOTPReque
 
 	uc.otpRepo.DeleteOTP(ctx, req.Email)
 
-	token, err := jwt.GenerateToken(emp.EmployeeID, emp.Role)
+	token, err := jwt.GenerateToken(emp.EmployeeID, emp.Role, emp.CompanyID)
 	if err != nil {
 		return "", errors.New("failed to generate token")
 	}
@@ -79,7 +79,7 @@ func (uc *authUsecase) Login(ctx context.Context, req *domain.LoginRequest) (str
 		return "", errors.New("invalid employee id or password")
 	}
 
-	token, err := jwt.GenerateToken(emp.EmployeeID, emp.Role)
+	token, err := jwt.GenerateToken(emp.EmployeeID, emp.Role, emp.CompanyID)
 	if err != nil {
 		return "", errors.New("failed to generate token")
 	}
