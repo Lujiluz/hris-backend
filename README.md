@@ -128,7 +128,8 @@ go test -v ./tests/...
 
 ## 🤝 Contributors
 
-| Role           | Developer                            |
-| -------------- | ------------------------------------ |
-| **Backend**    | Luji                                 |
-| **Mobile App** | [@kub1ga](https://github.com/kub1ga) |
+| Role           | Developer                               |
+| -------------- | --------------------------------------- |
+| **Backend**    | Luji                                    |
+| **Mobile App** | [@kub1ga](https://github.com/kub1ga)    |
+| **Assistance** | [Claude](https://claude.ai) (Anthropic) |
