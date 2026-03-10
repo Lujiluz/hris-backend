@@ -31,4 +31,22 @@ type EmployeeSequenceRepository interface {
 
 type EmployeeUsecase interface {
 	GenerateEmployeeID(ctx context.Context, companyID string, companyCode string) (string, error)
+	Register(ctx context.Context, req *RegisterRequest) error
+}
+
+type RegisterRequest struct {
+	CompanyCode   string `json:"company_code" binding:"required"`
+	Email         string `json:"email" binding:"required"`
+	PhoneNumber   string `json:"phone_number" binding:"required"`
+	Password      string `json:"password" binding:"required,min=6"`
+	IsTncAccepted bool   `json:"is_tnc_accepted" binding:"required"`
+}
+
+// Employee interfaces
+type EmployeeRepository interface {
+	Create(ctx context.Context, employee *Employee) error
+}
+
+type CompanyRepository interface {
+	GetByCode(ctx context.Context, code string) (*Company, error)
 }

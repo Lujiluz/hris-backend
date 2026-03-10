@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"hris-backend/internal/config"
+	"hris-backend/internal/delivery/http/handler"
+	"hris-backend/internal/repository/postgres"
+	"hris-backend/internal/usecase"
 	"hris-backend/pkg/database"
 	"hris-backend/pkg/logger"
 
@@ -23,12 +26,23 @@ func main() {
 	database.InitPostgres()
 	database.InitRedis()
 
-	// 2. Setup GIN
+	// repositories setup
+	seqRepo := postgres.NewEmployeeSequenceRepository(database.DB)
+	empRepo := postgres.NewEmployeeRepository(database.DB)
+	compRepo := postgres.NewCompanyRepository(database.DB)
+
+	// usecases setup
+	empUsecase := usecase.NewEmployeeUsecase(seqRepo, empRepo, compRepo)
+
+	// Setup GIN
 	if os.Getenv("APP_ENV") == "production" {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	router := gin.New()
 	router.Use(gin.Recovery())
+
+	apiV1 := router.Group("/api/v1")
+	handler.NewEmployeeHandler(apiV1, empUsecase)
 
 	// Simple Ping Route
 	router.GET("/ping", func(c *gin.Context) {
