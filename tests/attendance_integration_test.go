@@ -43,11 +43,14 @@ func TestAttendanceIntegration(t *testing.T) {
 	empRepo := repoPostgres.NewEmployeeRepository(db)
 	compRepo := repoPostgres.NewCompanyRepository(db)
 	otpRepo := redis.NewOTPRepository(rdb)
+	attendanceRepo := repoPostgres.NewAttendanceRepository(db)
+	breakRepo := repoPostgres.NewAttendanceBreakRepository(db)
+	scheduleRepo := repoPostgres.NewEmployeeScheduleRepository(db)
 
 	// Init usecases
 	empUC := usecase.NewEmployeeUsecase(seqRepo, empRepo, compRepo)
 	authUC := usecase.NewAuthUsecase(empRepo, otpRepo)
-	attendanceUC := usecase.NewAttendanceUsecase(compRepo)
+	attendanceUC := usecase.NewAttendanceUsecase(empRepo, compRepo, attendanceRepo, breakRepo, scheduleRepo)
 
 	// Init handlers
 	api := router.Group("/api/v1")
@@ -56,7 +59,8 @@ func TestAttendanceIntegration(t *testing.T) {
 	handler.NewAttendanceHandler(api, attendanceUC)
 
 	// Cleanup before and after
-	testEmailPrefix := "test_integration_geo_"
+	now := time.Now().UTC().Format(time.RFC3339)
+	testEmailPrefix := "test_integration_" + now
 	cleanup := func() {
 		db.Where("email LIKE ?", testEmailPrefix+"%").Delete(&domain.Employee{})
 		db.Exec(
@@ -68,15 +72,16 @@ func TestAttendanceIntegration(t *testing.T) {
 	defer cleanup()
 
 	// --- SETUP ---
-	testEmail := testEmailPrefix + "01@yopmail.com"
-	testPassword := "rahasia123"
+	generatedUserMock := SetupMockUser("attendance", testEmailPrefix)
+	testEmail := generatedUserMock.Email
+	testPassword := generatedUserMock.RandomPassword
 	var validToken string
 
 	t.Run("Setup: Register test employee", func(t *testing.T) {
 		reqBody := domain.RegisterRequest{
 			CompanyCode:   "GOTO",
 			Email:         testEmail,
-			PhoneNumber:   "+62899000000",
+			PhoneNumber:   generatedUserMock.PhoneNumber,
 			Password:      testPassword,
 			IsTncAccepted: true,
 		}
