@@ -103,12 +103,12 @@ func TestAuthIntegration(t *testing.T) {
 	db, rdb := setupTestDB()
 	router := setupTestRouter(db, rdb)
 
-	// Pastikan bersihin data sisa sebelum dan sesudah test jalan
+	// testing data cleanup before and after running the test
 	cleanUpTestDB(db, rdb)
 	defer cleanUpTestDB(db, rdb)
 
-	// Variables buat nyimpen state antar test
-	testEmail := "test_integration_01@goto.com"
+	// State Variables 
+	testEmail := "test_integration_01@yopmail.com"
 	testPassword := "rahasia123"
 	var generatedEmployeeID string
 	var validOTP string
@@ -116,7 +116,7 @@ func TestAuthIntegration(t *testing.T) {
 	// --- A. TEST REGISTRASI ---
 	t.Run("1. [Positive] Register Success", func(t *testing.T) {
 		reqBody := domain.RegisterRequest{
-			CompanyCode:   "GOTO", // Pastikan company ini udah ada di DB lu
+			CompanyCode:   "GOTO",
 			Email:         testEmail,
 			PhoneNumber:   "+6289999999999",
 			Password:      testPassword,
@@ -129,20 +129,18 @@ func TestAuthIntegration(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, w.Code)
 
-		// Verifikasi DB langsung (The Real Integration)
 		var emp domain.Employee
 		err := db.Where("email = ?", testEmail).First(&emp).Error
 		assert.NoError(t, err)
 		assert.NotEmpty(t, emp.EmployeeID)
 
-		// Simpan ID buat test login nanti
 		generatedEmployeeID = emp.EmployeeID
 	})
 
 	t.Run("2. [Edge] Register Duplicate Email", func(t *testing.T) {
 		reqBody := domain.RegisterRequest{
 			CompanyCode:   "GOTO",
-			Email:         testEmail, // Sengaja pake email yang sama
+			Email:         testEmail, 
 			PhoneNumber:   "+6288888888888",
 			Password:      "passwordbaru",
 			IsTncAccepted: true,
@@ -152,7 +150,7 @@ func TestAuthIntegration(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		// Harus gagal (500 karena constraint DB, atau 400 tergantung error handling lu)
+		// Must failed
 		assert.NotEqual(t, http.StatusCreated, w.Code)
 	})
 
@@ -166,12 +164,12 @@ func TestAuthIntegration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		// Intip ke Redis beneran dapet gak OTP-nya
+		// Check via redis
 		otp, err := rdb.Get(context.Background(), "otp:"+testEmail).Result()
 		assert.NoError(t, err)
 		assert.Len(t, otp, 6)
 
-		validOTP = otp // Simpen buat test verify
+		validOTP = otp 
 	})
 
 	t.Run("4. [Negative] Request OTP Unregistered Email", func(t *testing.T) {
@@ -188,7 +186,7 @@ func TestAuthIntegration(t *testing.T) {
 	t.Run("5. [Negative] Verify OTP Wrong Code", func(t *testing.T) {
 		reqBody := map[string]string{
 			"email": testEmail,
-			"otp":   "000000", // Sengaja disalahin
+			"otp":   "000000",
 		}
 		body, _ := json.Marshal(reqBody)
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/otp/verify", bytes.NewBuffer(body))
@@ -201,7 +199,7 @@ func TestAuthIntegration(t *testing.T) {
 	t.Run("6. [Positive] Verify OTP Success & Get Token", func(t *testing.T) {
 		reqBody := map[string]string{
 			"email": testEmail,
-			"otp":   validOTP, // Pake OTP asli dari test sblmnya
+			"otp":   validOTP,
 		}
 		body, _ := json.Marshal(reqBody)
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/otp/verify", bytes.NewBuffer(body))
@@ -210,7 +208,7 @@ func TestAuthIntegration(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		// Assert balikan JSON-nya ada token
+		// Assert response JSON with token
 		var response map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &response)
 		assert.Contains(t, response, "token")
@@ -226,7 +224,7 @@ func TestAuthIntegration(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		// Harus Unauthorized karena OTP udah dihapus dari Redis pas test no 6 jalan
+		// should be unauthorized
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
