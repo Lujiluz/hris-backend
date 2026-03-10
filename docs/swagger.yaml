@@ -1,0 +1,144 @@
+basePath: /api/v1
+definitions:
+  hris-backend_internal_domain.LoginRequest:
+    properties:
+      employee_id:
+        type: string
+      password:
+        type: string
+    required:
+    - employee_id
+    - password
+    type: object
+  hris-backend_internal_domain.RequestOTPRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  hris-backend_internal_domain.VerifyOTPRequest:
+    properties:
+      email:
+        type: string
+      otp:
+        type: string
+    required:
+    - email
+    - otp
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: luji@hris-space.com
+    name: Luji API Support
+  description: Ini adalah dokumentasi API untuk aplikasi mobile dan admin HRIS.
+  termsOfService: http://swagger.io/terms/
+  title: HRIS Backend API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Endpoint untuk mendapatkan JWT Token dengan verifikasi password
+      parameters:
+      - description: Payload Login
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/hris-backend_internal_domain.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Berhasil login, mengembalikan token
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request (Format JSON salah)
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized (Kredensial salah)
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Login menggunakan Employee ID dan Password
+      tags:
+      - Auth
+  /auth/otp/request:
+    post:
+      consumes:
+      - application/json
+      description: Endpoint untuk mengirimkan 6 digit OTP ke email yang terdaftar
+      parameters:
+      - description: Payload Request OTP
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/hris-backend_internal_domain.RequestOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OTP berhasil dikirim
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Email tidak terdaftar
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Meminta kode OTP via Email
+      tags:
+      - Auth
+  /auth/otp/verify:
+    post:
+      consumes:
+      - application/json
+      description: Endpoint untuk memvalidasi OTP dan mengembalikan JWT Token
+      parameters:
+      - description: Payload Verify OTP
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/hris-backend_internal_domain.VerifyOTPRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Berhasil verifikasi, mengembalikan token
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: OTP salah atau kadaluarsa
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Verifikasi kode OTP dan Dapatkan Token
+      tags:
+      - Auth
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

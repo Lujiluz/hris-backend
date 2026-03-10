@@ -19,6 +19,17 @@ func NewEmployeeHandler(r *gin.RouterGroup, us domain.EmployeeUsecase) {
 	r.POST("/register", handler.Register)
 }
 
+// Register godoc
+// @Summary Mendaftarkan karyawan baru
+// @Description Endpoint untuk mendaftarkan karyawan baru ke dalam sistem HRIS. Membutuhkan Company Code yang valid. Employee ID akan di-generate otomatis.
+// @Tags Employee
+// @Accept json
+// @Produce json
+// @Param request body domain.RegisterRequest true "Payload Registrasi Karyawan"
+// @Success 201 {object} map[string]interface{} "Berhasil mendaftarkan karyawan"
+// @Failure 400 {object} map[string]interface{} "Bad Request (Format JSON salah atau validasi gagal)"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error (Company code tidak valid atau gagal menyimpan data)"
+// @Router /register [post]
 func (h *EmployeeHandler) Register(c *gin.Context) {
 	var req domain.RegisterRequest
 

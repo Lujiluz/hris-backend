@@ -18,10 +18,29 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog/log"
+
+	_ "hris-backend/docs"
+
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
+// @title HRIS Backend API
+// @version 1.0
+// @description Ini adalah dokumentasi API untuk aplikasi mobile dan admin HRIS.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name Luji API Support
+// @contact.email zlfjrii@gmail.com
+
+// @host localhost:3030
+// @BasePath /api/v1
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
-	// 1. Setup Basic
+	// Basic setup
 	config.LoadConfig()
 	logger.InitLogger()
 	database.InitPostgres()
@@ -44,6 +63,9 @@ func main() {
 	router := gin.New()
 	router.Use(gin.Recovery())
 
+	// swagger setup
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	apiV1 := router.Group("/api/v1")
 	handler.NewEmployeeHandler(apiV1, empUsecase)
 	handler.NewAuthHandler(apiV1, authUsecase)
@@ -53,7 +75,7 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"message": "pong", "status": "HRIS API is running"})
 	})
 
-	// 3. Graceful Shutdown Setup
+	// Graceful Shutdown
 	srv := &http.Server{
 		Addr:    ":" + os.Getenv("APP_PORT"),
 		Handler: router,
