@@ -48,7 +48,6 @@ func setupTestDB() (*gorm.DB, *redisClient.Client) {
 	}
 
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPass, dbHost, dbPort, dbName)
-	println(dsn)
 
 	db, err := gorm.Open(gormPostgres.Open(dsn), &gorm.Config{})
 	if err != nil {
@@ -107,7 +106,7 @@ func TestAuthIntegration(t *testing.T) {
 	cleanUpTestDB(db, rdb)
 	defer cleanUpTestDB(db, rdb)
 
-	// State Variables 
+	// State Variables
 	testEmail := "test_integration_01@yopmail.com"
 	testPassword := "rahasia123"
 	var generatedEmployeeID string
@@ -140,7 +139,7 @@ func TestAuthIntegration(t *testing.T) {
 	t.Run("2. [Edge] Register Duplicate Email", func(t *testing.T) {
 		reqBody := domain.RegisterRequest{
 			CompanyCode:   "GOTO",
-			Email:         testEmail, 
+			Email:         testEmail,
 			PhoneNumber:   "+6288888888888",
 			Password:      "passwordbaru",
 			IsTncAccepted: true,
@@ -169,7 +168,7 @@ func TestAuthIntegration(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Len(t, otp, 6)
 
-		validOTP = otp 
+		validOTP = otp
 	})
 
 	t.Run("4. [Negative] Request OTP Unregistered Email", func(t *testing.T) {
