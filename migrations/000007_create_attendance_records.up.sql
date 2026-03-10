@@ -1,0 +1,20 @@
+CREATE TABLE attendance_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    employee_id UUID NOT NULL REFERENCES employees(id) ON DELETE CASCADE,
+    company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+    work_date DATE NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'clocked_in',
+    clock_in_at TIMESTAMPTZ NOT NULL,
+    clock_out_at TIMESTAMPTZ,
+    clock_in_latitude DOUBLE PRECISION NOT NULL,
+    clock_in_longitude DOUBLE PRECISION NOT NULL,
+    selfie_clock_in_url TEXT NOT NULL,
+    notes TEXT,
+    scheduled_clock_in_at TIMESTAMPTZ,
+    scheduled_clock_out_at TIMESTAMPTZ,
+    working_minutes INT,
+    overtime_minutes INT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (employee_id, work_date)
+);
