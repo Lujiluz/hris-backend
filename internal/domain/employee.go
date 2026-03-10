@@ -77,4 +77,5 @@ type EmployeeRepository interface {
 
 type CompanyRepository interface {
 	GetByCode(ctx context.Context, code string) (*Company, error)
+	GetByID(ctx context.Context, id string) (*Company, error)
 }

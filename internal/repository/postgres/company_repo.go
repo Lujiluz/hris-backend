@@ -24,3 +24,11 @@ func (r *companyRepo) GetByCode(ctx context.Context, code string) (*domain.Compa
 
 	return &company, nil
 }
+
+func (r *companyRepo) GetByID(ctx context.Context, id string) (*domain.Company, error) {
+	var company domain.Company
+	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&company).Error; err != nil {
+		return nil, err
+	}
+	return &company, nil
+}
