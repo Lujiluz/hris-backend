@@ -51,11 +51,14 @@ func main() {
 	empRepo := postgres.NewEmployeeRepository(database.DB)
 	compRepo := postgres.NewCompanyRepository(database.DB)
 	otpRepo := redis.NewOTPRepository(database.RedisClient)
+	attendanceRepo := postgres.NewAttendanceRepository(database.DB)
+	breakRepo := postgres.NewAttendanceBreakRepository(database.DB)
+	scheduleRepo := postgres.NewEmployeeScheduleRepository(database.DB)
 
 	// usecases setup
 	empUsecase := usecase.NewEmployeeUsecase(seqRepo, empRepo, compRepo)
 	authUsecase := usecase.NewAuthUsecase(empRepo, otpRepo)
-	attendanceUsecase := usecase.NewAttendanceUsecase(compRepo)
+	attendanceUsecase := usecase.NewAttendanceUsecase(empRepo, compRepo, attendanceRepo, breakRepo, scheduleRepo)
 
 	// Setup GIN
 	if os.Getenv("APP_ENV") == "production" {
