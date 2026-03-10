@@ -42,9 +42,37 @@ type RegisterRequest struct {
 	IsTncAccepted bool   `json:"is_tnc_accepted" binding:"required"`
 }
 
+type RequestOTPRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+type VerifyOTPRequest struct {
+	Email string `json:"email" binding:"required,email"`
+	OTP   string `json:"otp" binding:"required,len=6"`
+}
+
+type LoginRequest struct {
+	EmployeeID string `json:"employee_id" binding:"required"`
+	Password   string `json:"password" binding:"required"`
+}
+
+type AuthUsecase interface {
+	RequestOTP(ctx context.Context, req *RequestOTPRequest) error
+	VerifyOTP(ctx context.Context, req *VerifyOTPRequest) (string, error)
+	Login(ctx context.Context, req *LoginRequest) (string, error)
+}
+
+type OTPRepository interface {
+	SetOTP(ctx context.Context, email string, otp string, expiration time.Duration) error
+	GetOTP(ctx context.Context, email string) (string, error)
+	DeleteOTP(ctx context.Context, email string) error
+}
+
 // Employee interfaces
 type EmployeeRepository interface {
 	Create(ctx context.Context, employee *Employee) error
+	GetByEmail(ctx context.Context, email string) (*Employee, error)
+	GetByEmployeeID(ctx context.Context, employeeID string) (*Employee, error)
 }
 
 type CompanyRepository interface {

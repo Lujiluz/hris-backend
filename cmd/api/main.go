@@ -11,6 +11,7 @@ import (
 	"hris-backend/internal/config"
 	"hris-backend/internal/delivery/http/handler"
 	"hris-backend/internal/repository/postgres"
+	"hris-backend/internal/repository/redis"
 	"hris-backend/internal/usecase"
 	"hris-backend/pkg/database"
 	"hris-backend/pkg/logger"
@@ -30,9 +31,11 @@ func main() {
 	seqRepo := postgres.NewEmployeeSequenceRepository(database.DB)
 	empRepo := postgres.NewEmployeeRepository(database.DB)
 	compRepo := postgres.NewCompanyRepository(database.DB)
+	otpRepo := redis.NewOTPRepository(database.RedisClient)
 
 	// usecases setup
 	empUsecase := usecase.NewEmployeeUsecase(seqRepo, empRepo, compRepo)
+	authUsecase := usecase.NewAuthUsecase(empRepo, otpRepo)
 
 	// Setup GIN
 	if os.Getenv("APP_ENV") == "production" {
@@ -43,6 +46,7 @@ func main() {
 
 	apiV1 := router.Group("/api/v1")
 	handler.NewEmployeeHandler(apiV1, empUsecase)
+	handler.NewAuthHandler(apiV1, authUsecase)
 
 	// Simple Ping Route
 	router.GET("/ping", func(c *gin.Context) {
