@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"time"
 
 	"gorm.io/gorm"
@@ -21,4 +22,13 @@ type Employee struct {
 
 	// Relation
 	Company Company `gorm:"foreignKey:CompanyID" json:"company,omitzero"`
+}
+
+type EmployeeSequenceRepository interface {
+	// guarantee atomic operation: insert new (1) or increment (+1)
+	IncrementAndGetCounter(ctx context.Context, companyID string, year int) (int, error)
+}
+
+type EmployeeUsecase interface {
+	GenerateEmployeeID(ctx context.Context, companyID string, companyCode string) (string, error)
 }
