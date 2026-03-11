@@ -69,14 +69,26 @@ func (uc *authUsecase) VerifyOTP(ctx context.Context, req *domain.VerifyOTPReque
 }
 
 func (uc *authUsecase) Login(ctx context.Context, req *domain.LoginRequest) (string, error) {
-	emp, err := uc.empRepo.GetByEmployeeID(ctx, req.EmployeeID)
-	if err != nil {
-		return "", errors.New("invalid employee id or password")
+	var emp *domain.Employee
+	var err error
+
+	switch {
+	case req.EmployeeID != "":
+		emp, err = uc.empRepo.GetByEmployeeID(ctx, req.EmployeeID)
+	case req.Email != "":
+		emp, err = uc.empRepo.GetByEmail(ctx, req.Email)
+	case req.PhoneNumber != "":
+		emp, err = uc.empRepo.GetByPhoneNumber(ctx, req.PhoneNumber)
+	default:
+		return "", errors.New("provide employee_id, email, or phone_number")
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(emp.Password), []byte(req.Password))
 	if err != nil {
-		return "", errors.New("invalid employee id or password")
+		return "", errors.New("invalid credentials")
+	}
+
+	if bcrypt.CompareHashAndPassword([]byte(emp.Password), []byte(req.Password)) != nil {
+		return "", errors.New("invalid credentials")
 	}
 
 	token, err := jwt.GenerateToken(emp.EmployeeID, emp.Role, emp.CompanyID)

@@ -52,8 +52,10 @@ type VerifyOTPRequest struct {
 }
 
 type LoginRequest struct {
-	EmployeeID string `json:"employee_id" binding:"required"`
-	Password   string `json:"password" binding:"required"`
+	EmployeeID  string `json:"employee_id"`
+	Email       string `json:"email"`
+	PhoneNumber string `json:"phone_number"`
+	Password    string `json:"password" binding:"required"`
 }
 
 type AuthUsecase interface {
@@ -73,6 +75,7 @@ type EmployeeRepository interface {
 	Create(ctx context.Context, employee *Employee) error
 	GetByEmail(ctx context.Context, email string) (*Employee, error)
 	GetByEmployeeID(ctx context.Context, employeeID string) (*Employee, error)
+	GetByPhoneNumber(ctx context.Context, phoneNumber string) (*Employee, error)
 }
 
 type CompanyRepository interface {

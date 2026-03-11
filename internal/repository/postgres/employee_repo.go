@@ -38,3 +38,12 @@ func (r *employeeRepo) GetByEmployeeID(ctx context.Context, employeeID string) (
 	}
 	return &employee, nil
 }
+
+func (r *employeeRepo) GetByPhoneNumber(ctx context.Context, phoneNumber string) (*domain.Employee, error) {
+	var employee domain.Employee
+	err := r.db.WithContext(ctx).Where("phone_number = ?", phoneNumber).First(&employee).Error
+	if err != nil {
+		return nil, err
+	}
+	return &employee, nil
+}
