@@ -103,8 +103,8 @@ func TestAuthIntegration(t *testing.T) {
 	router := setupTestRouter(db, rdb)
 
 	// testing data cleanup before and after running the test
-	cleanUpTestDB(db, rdb)
-	defer cleanUpTestDB(db, rdb)
+	// cleanUpTestDB(db, rdb)
+	// defer cleanUpTestDB(db, rdb)
 
 	// State Variables
 	testEmail := "test_integration_01@yopmail.com"
