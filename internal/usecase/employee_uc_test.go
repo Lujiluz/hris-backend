@@ -31,7 +31,7 @@ func TestGenerateEmployeeID(t *testing.T) {
 		// Tell mock to: if called, return 1 without error
 		mockRepo.On("IncrementAndGetCounter", mock.Anything, companyID, currentYear).Return(1, nil)
 
-		uc := usecase.NewEmployeeUsecase(mockRepo)
+		uc := usecase.NewEmployeeUsecase(mockRepo, nil, nil)
 		employeeID, err := uc.GenerateEmployeeID(context.Background(), companyID, companyCode)
 
 		assert.NoError(t, err)
@@ -43,7 +43,7 @@ func TestGenerateEmployeeID(t *testing.T) {
 		mockRepo := new(MockSequenceRepo)
 		mockRepo.On("IncrementAndGetCounter", mock.Anything, companyID, currentYear).Return(150, nil)
 
-		uc := usecase.NewEmployeeUsecase(mockRepo)
+		uc := usecase.NewEmployeeUsecase(mockRepo, nil, nil)
 		employeeID, err := uc.GenerateEmployeeID(context.Background(), companyID, companyCode)
 
 		assert.NoError(t, err)
@@ -56,7 +56,7 @@ func TestGenerateEmployeeID(t *testing.T) {
 		dbError := errors.New("database connection lost")
 		mockRepo.On("IncrementAndGetCounter", mock.Anything, companyID, currentYear).Return(0, dbError)
 
-		uc := usecase.NewEmployeeUsecase(mockRepo)
+		uc := usecase.NewEmployeeUsecase(mockRepo, nil, nil)
 		employeeID, err := uc.GenerateEmployeeID(context.Background(), companyID, companyCode)
 
 		assert.Error(t, err)
