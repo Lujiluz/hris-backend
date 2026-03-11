@@ -108,6 +108,7 @@ func TestAuthIntegration(t *testing.T) {
 
 	// State Variables
 	testEmail := "test_integration_01@yopmail.com"
+	testPhone := "+6289999999999"
 	testPassword := "rahasia123"
 	var generatedEmployeeID string
 	var validOTP string
@@ -228,7 +229,7 @@ func TestAuthIntegration(t *testing.T) {
 	})
 
 	// --- D. TEST LOGIN PASSWORD ---
-	t.Run("8. [Positive] Login with Password", func(t *testing.T) {
+	t.Run("8. [Positive] Login with Employee ID", func(t *testing.T) {
 		reqBody := domain.LoginRequest{
 			EmployeeID: generatedEmployeeID,
 			Password:   testPassword,
@@ -239,9 +240,65 @@ func TestAuthIntegration(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
-
 		var response map[string]interface{}
 		json.Unmarshal(w.Body.Bytes(), &response)
 		assert.Contains(t, response, "token")
+	})
+
+	t.Run("9. [Positive] Login with Email", func(t *testing.T) {
+		reqBody := domain.LoginRequest{
+			Email:    testEmail,
+			Password: testPassword,
+		}
+		body, _ := json.Marshal(reqBody)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBuffer(body))
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		var response map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &response)
+		assert.Contains(t, response, "token")
+	})
+
+	t.Run("10. [Positive] Login with Phone Number", func(t *testing.T) {
+		reqBody := domain.LoginRequest{
+			PhoneNumber: testPhone,
+			Password:    testPassword,
+		}
+		body, _ := json.Marshal(reqBody)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBuffer(body))
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+		var response map[string]interface{}
+		json.Unmarshal(w.Body.Bytes(), &response)
+		assert.Contains(t, response, "token")
+	})
+
+	t.Run("11. [Negative] Login with Wrong Password", func(t *testing.T) {
+		reqBody := domain.LoginRequest{
+			EmployeeID: generatedEmployeeID,
+			Password:   "wrongpassword",
+		}
+		body, _ := json.Marshal(reqBody)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBuffer(body))
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	})
+
+	t.Run("12. [Negative] Login with No Identifier", func(t *testing.T) {
+		reqBody := domain.LoginRequest{
+			Password: testPassword,
+		}
+		body, _ := json.Marshal(reqBody)
+		req, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewBuffer(body))
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 }
