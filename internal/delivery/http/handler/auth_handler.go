@@ -82,15 +82,15 @@ func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 }
 
 // Login godoc
-// @Summary Login menggunakan Employee ID dan Password
-// @Description Endpoint untuk mendapatkan JWT Token dengan verifikasi password
+// @Summary Login menggunakan Employee ID, Email, atau Nomor Telepon
+// @Description Endpoint untuk mendapatkan JWT Token. Isi salah satu dari: employee_id, email, atau phone_number beserta password.
 // @Tags Auth
 // @Accept json
 // @Produce json
 // @Param request body domain.LoginRequest true "Payload Login"
 // @Success 200 {object} map[string]interface{} "Berhasil login, mengembalikan token"
-// @Failure 400 {object} map[string]interface{} "Bad Request (Format JSON salah)"
-// @Failure 401 {object} map[string]interface{} "Unauthorized (Kredensial salah)"
+// @Failure 400 {object} map[string]interface{} "Bad Request"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req domain.LoginRequest
@@ -105,8 +105,5 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "login successful",
-		"token":   token,
-	})
+	c.JSON(http.StatusOK, gin.H{"message": "login successful", "token": token})
 }
