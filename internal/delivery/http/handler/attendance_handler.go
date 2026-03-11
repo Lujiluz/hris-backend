@@ -19,6 +19,8 @@ func NewAttendanceHandler(r *gin.RouterGroup, uc domain.AttendanceUsecase) {
 	h := &AttendanceHandler{attendanceUsecase: uc}
 	g := r.Group("/attendance")
 	g.Use(middleware.JWTAuth())
+	g.POST("/register", h.RegisterSelfie)
+	g.GET("/register", h.GetRegisteredSelfie)
 	g.POST("/validate-location", h.ValidateLocation)
 	g.POST("/clock-in", h.ClockIn)
 	g.POST("/break", h.ToggleBreak)
@@ -236,6 +238,72 @@ func (h *AttendanceHandler) ClockOut(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		case errors.Is(err, domain.ErrAlreadyClockedOut):
 			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
+}
+
+// @Summary Register employee selfie for face recognition
+// @Tags Attendance
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body domain.RegisterSelfieRequest true "Cloudinary selfie URL"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 401 {object} map[string]interface{}
+// @Failure 409 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /attendance/register [post]
+func (h *AttendanceHandler) RegisterSelfie(c *gin.Context) {
+	var req domain.RegisterSelfieRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	employeeID, _, ok := extractClaims(c)
+	if !ok {
+		return
+	}
+
+	if err := h.attendanceUsecase.RegisterSelfie(c.Request.Context(), employeeID, &req); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrSelfieAlreadyRegistered):
+			c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "selfie registered", "selfie_url": req.SelfieURL})
+}
+
+// @Summary Get registered selfie for the authenticated employee
+// @Tags Attendance
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} domain.SelfieStatusResponse
+// @Failure 401 {object} map[string]interface{}
+// @Failure 404 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /attendance/register [get]
+func (h *AttendanceHandler) GetRegisteredSelfie(c *gin.Context) {
+	employeeID, _, ok := extractClaims(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.attendanceUsecase.GetRegisteredSelfie(c.Request.Context(), employeeID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrSelfieNotRegistered):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		default:
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		}

@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"hris-backend/internal/domain"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -46,4 +47,15 @@ func (r *employeeRepo) GetByPhoneNumber(ctx context.Context, phoneNumber string)
 		return nil, err
 	}
 	return &employee, nil
+}
+
+func (r *employeeRepo) RegisterSelfie(ctx context.Context, employeeID string, selfieURL string) error {
+	now := time.Now()
+	return r.db.WithContext(ctx).
+		Model(&domain.Employee{}).
+		Where("employee_id = ?", employeeID).
+		Updates(map[string]interface{}{
+			"selfie_url":           selfieURL,
+			"selfie_registered_at": now,
+		}).Error
 }

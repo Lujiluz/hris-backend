@@ -98,6 +98,8 @@ type AttendanceUsecase interface {
 	GetClockOutPreview(ctx context.Context, employeeID string, companyID uuid.UUID) (*ClockOutPreview, error)
 	ClockOut(ctx context.Context, employeeID string, companyID uuid.UUID) (*ClockOutResponse, error)
 	GetTodayStatus(ctx context.Context, employeeID string) (*TodayStatusResponse, error)
+	RegisterSelfie(ctx context.Context, employeeID string, req *RegisterSelfieRequest) error
+	GetRegisteredSelfie(ctx context.Context, employeeID string) (*SelfieStatusResponse, error)
 }
 
 // --- DTOs ---
@@ -167,4 +169,13 @@ type TodayStatusResponse struct {
 	IsOnBreak         bool       `json:"is_on_break,omitempty"`
 	OpenBreakStartAt  *time.Time `json:"open_break_start_at,omitempty"`
 	Notes             *string    `json:"notes,omitempty"`
+}
+
+type RegisterSelfieRequest struct {
+	SelfieURL string `json:"selfie_url" binding:"required,url"`
+}
+
+type SelfieStatusResponse struct {
+	SelfieURL    string    `json:"selfie_url"`
+	RegisteredAt time.Time `json:"registered_at"`
 }

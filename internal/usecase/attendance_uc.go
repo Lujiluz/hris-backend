@@ -307,6 +307,31 @@ func (uc *attendanceUsecase) ClockOut(ctx context.Context, employeeID string, co
 	}, nil
 }
 
+func (uc *attendanceUsecase) RegisterSelfie(ctx context.Context, employeeID string, req *domain.RegisterSelfieRequest) error {
+	emp, err := uc.empRepo.GetByEmployeeID(ctx, employeeID)
+	if err != nil {
+		return err
+	}
+	if emp.SelfieURL != nil && *emp.SelfieURL != "" {
+		return domain.ErrSelfieAlreadyRegistered
+	}
+	return uc.empRepo.RegisterSelfie(ctx, employeeID, req.SelfieURL)
+}
+
+func (uc *attendanceUsecase) GetRegisteredSelfie(ctx context.Context, employeeID string) (*domain.SelfieStatusResponse, error) {
+	emp, err := uc.empRepo.GetByEmployeeID(ctx, employeeID)
+	if err != nil {
+		return nil, err
+	}
+	if emp.SelfieURL == nil || *emp.SelfieURL == "" {
+		return nil, domain.ErrSelfieNotRegistered
+	}
+	return &domain.SelfieStatusResponse{
+		SelfieURL:    *emp.SelfieURL,
+		RegisteredAt: *emp.SelfieRegisteredAt,
+	}, nil
+}
+
 func (uc *attendanceUsecase) GetTodayStatus(ctx context.Context, employeeID string) (*domain.TodayStatusResponse, error) {
 	empUUID, err := uc.resolveEmployeeUUID(ctx, employeeID)
 	if err != nil {

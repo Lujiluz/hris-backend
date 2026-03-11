@@ -2,23 +2,26 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"gorm.io/gorm"
 )
 
 type Employee struct {
-	ID            string         `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
-	CompanyID     string         `gorm:"type:uuid;not null" json:"company_id"`
-	EmployeeID    string         `gorm:"type:varchar(100);uniqueIndex;not null" json:"employee_id"`
-	Email         string         `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
-	PhoneNumber   string         `gorm:"type:varchar(50);uniqueIndex;not null" json:"phone_number"`
-	Password      string         `gorm:"type:varchar(255);not null" json:"-"`
-	IsTncAccepted bool           `gorm:"default:false" json:"is_tnc_accepted"`
-	Role          string         `gorm:"type:varchar(50);default:'staff'" json:"role"`
-	CreatedAt     time.Time      `json:"created_at"`
-	UpdatedAt     time.Time      `json:"updated_at"`
-	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
+	ID                  string         `gorm:"type:uuid;default:uuid_generate_v4();primaryKey" json:"id"`
+	CompanyID           string         `gorm:"type:uuid;not null" json:"company_id"`
+	EmployeeID          string         `gorm:"type:varchar(100);uniqueIndex;not null" json:"employee_id"`
+	Email               string         `gorm:"type:varchar(255);uniqueIndex;not null" json:"email"`
+	PhoneNumber         string         `gorm:"type:varchar(50);uniqueIndex;not null" json:"phone_number"`
+	Password            string         `gorm:"type:varchar(255);not null" json:"-"`
+	IsTncAccepted       bool           `gorm:"default:false" json:"is_tnc_accepted"`
+	Role                string         `gorm:"type:varchar(50);default:'staff'" json:"role"`
+	SelfieURL           *string        `gorm:"type:text" json:"selfie_url,omitempty"`
+	SelfieRegisteredAt  *time.Time     `json:"selfie_registered_at,omitempty"`
+	CreatedAt           time.Time      `json:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"`
+	DeletedAt           gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relation
 	Company Company `gorm:"foreignKey:CompanyID" json:"company,omitzero"`
@@ -70,12 +73,18 @@ type OTPRepository interface {
 	DeleteOTP(ctx context.Context, email string) error
 }
 
+var (
+	ErrSelfieAlreadyRegistered = errors.New("selfie already registered for this employee")
+	ErrSelfieNotRegistered     = errors.New("no selfie registered for this employee")
+)
+
 // Employee interfaces
 type EmployeeRepository interface {
 	Create(ctx context.Context, employee *Employee) error
 	GetByEmail(ctx context.Context, email string) (*Employee, error)
 	GetByEmployeeID(ctx context.Context, employeeID string) (*Employee, error)
 	GetByPhoneNumber(ctx context.Context, phoneNumber string) (*Employee, error)
+	RegisterSelfie(ctx context.Context, employeeID string, selfieURL string) error
 }
 
 type CompanyRepository interface {
