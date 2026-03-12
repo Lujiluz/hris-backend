@@ -36,7 +36,7 @@ func TestAttendanceFullFlow(t *testing.T) {
 	scheduleRepo := repoPostgres.NewEmployeeScheduleRepository(db)
 
 	empUC := usecase.NewEmployeeUsecase(seqRepo, empRepo, compRepo)
-	authUC := usecase.NewAuthUsecase(empRepo, otpRepo)
+	authUC := usecase.NewAuthUsecase(empRepo, otpRepo, &noopEmailEnqueuer{})
 	attendanceUC := usecase.NewAttendanceUsecase(empRepo, compRepo, attendanceRepo, breakRepo, scheduleRepo)
 
 	handler.NewEmployeeHandler(api, empUC)

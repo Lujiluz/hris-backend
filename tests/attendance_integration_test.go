@@ -49,7 +49,7 @@ func TestAttendanceIntegration(t *testing.T) {
 
 	// Init usecases
 	empUC := usecase.NewEmployeeUsecase(seqRepo, empRepo, compRepo)
-	authUC := usecase.NewAuthUsecase(empRepo, otpRepo)
+	authUC := usecase.NewAuthUsecase(empRepo, otpRepo, &noopEmailEnqueuer{})
 	attendanceUC := usecase.NewAttendanceUsecase(empRepo, compRepo, attendanceRepo, breakRepo, scheduleRepo)
 
 	// Init handlers
