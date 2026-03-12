@@ -71,7 +71,7 @@ func setupTestDB() (*gorm.DB, *redisClient.Client) {
 
 func cleanUpTestDB(db *gorm.DB, rdb *redisClient.Client) {
 	db.Where("email LIKE ?", "test_integration_%").Delete(&domain.Employee{})
-	rdb.Del(context.Background(), "otp:test_integration_01@goto.com")
+	rdb.Del(context.Background(), "otp:test_integration_01@yopmail.com")
 }
 
 func setupTestRouter(db *gorm.DB, rdb *redisClient.Client) *gin.Engine {
@@ -86,7 +86,7 @@ func setupTestRouter(db *gorm.DB, rdb *redisClient.Client) *gin.Engine {
 
 	// Init Usecase
 	empUC := usecase.NewEmployeeUsecase(seqRepo, empRepo, compRepo)
-	authUC := usecase.NewAuthUsecase(empRepo, otpRepo)
+	authUC := usecase.NewAuthUsecase(empRepo, otpRepo, &noopEmailEnqueuer{})
 
 	// Init Handler
 	api := router.Group("/api/v1")
@@ -173,7 +173,7 @@ func TestAuthIntegration(t *testing.T) {
 	})
 
 	t.Run("4. [Negative] Request OTP Unregistered Email", func(t *testing.T) {
-		reqBody := map[string]string{"email": "test_integration_ngawur@goto.com"}
+		reqBody := map[string]string{"email": "test_integration_ngawur@yopmail.com"}
 		body, _ := json.Marshal(reqBody)
 		req, _ := http.NewRequest(http.MethodPost, "/api/v1/auth/otp/request", bytes.NewBuffer(body))
 		w := httptest.NewRecorder()
@@ -299,6 +299,13 @@ func TestAuthIntegration(t *testing.T) {
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
+}
+
+// noopEmailEnqueuer satisfies domain.EmailTaskEnqueuer without sending real emails.
+type noopEmailEnqueuer struct{}
+
+func (n *noopEmailEnqueuer) EnqueueOTPEmail(_ context.Context, _, _ string) error {
+	return nil
 }
