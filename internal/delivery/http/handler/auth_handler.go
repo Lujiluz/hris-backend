@@ -27,15 +27,15 @@ func NewAuthHandler(r *gin.RouterGroup, us domain.AuthUsecase) {
 }
 
 // RequestOTP godoc
-// @Summary Meminta kode OTP via Email
-// @Description Endpoint untuk mengirimkan 6 digit OTP ke email yang terdaftar
+// @Summary Request a 6-digit OTP via email
+// @Description Sends a 6-digit OTP code to the registered email address. OTP expires after 5 minutes.
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param request body domain.RequestOTPRequest true "Payload Request OTP"
-// @Success 200 {object} map[string]interface{} "OTP berhasil dikirim"
-// @Failure 400 {object} map[string]interface{} "Bad Request"
-// @Failure 401 {object} map[string]interface{} "Email tidak terdaftar"
+// @Param request body domain.RequestOTPRequest true "Email address"
+// @Success 200 {object} map[string]interface{} "OTP sent successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body or email format"
+// @Failure 401 {object} map[string]interface{} "Email is not registered"
 // @Router /auth/otp/request [post]
 func (h *AuthHandler) RequestOTP(c *gin.Context) {
 	var req domain.RequestOTPRequest
@@ -53,15 +53,15 @@ func (h *AuthHandler) RequestOTP(c *gin.Context) {
 }
 
 // VerifyOTP godoc
-// @Summary Verifikasi kode OTP dan Dapatkan Token
-// @Description Endpoint untuk memvalidasi OTP dan mengembalikan JWT Token
+// @Summary Verify OTP and get JWT token
+// @Description Validates the 6-digit OTP code and returns a JWT token on success. OTP is single-use and expires after 5 minutes.
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param request body domain.VerifyOTPRequest true "Payload Verify OTP"
-// @Success 200 {object} map[string]interface{} "Berhasil verifikasi, mengembalikan token"
-// @Failure 400 {object} map[string]interface{} "Bad Request"
-// @Failure 401 {object} map[string]interface{} "OTP salah atau kadaluarsa"
+// @Param request body domain.VerifyOTPRequest true "Email and OTP code"
+// @Success 200 {object} map[string]interface{} "OTP verified, returns JWT token"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 401 {object} map[string]interface{} "Invalid or expired OTP"
 // @Router /auth/otp/verify [post]
 func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 	var req domain.VerifyOTPRequest
@@ -83,15 +83,16 @@ func (h *AuthHandler) VerifyOTP(c *gin.Context) {
 }
 
 // Login godoc
-// @Summary Login menggunakan Employee ID, Email, atau Nomor Telepon
-// @Description Endpoint untuk mendapatkan JWT Token. Isi salah satu dari: employee_id, email, atau phone_number beserta password.
+// @Summary Login with Employee ID, Email, or Phone Number
+// @Description Authenticate using password plus one of: employee_id, email, or phone_number.
+// @Description Provide exactly one identifier field alongside the password. Returns a JWT token on success.
 // @Tags Auth
 // @Accept json
 // @Produce json
-// @Param request body domain.LoginRequest true "Payload Login"
-// @Success 200 {object} map[string]interface{} "Berhasil login, mengembalikan token"
-// @Failure 400 {object} map[string]interface{} "Bad Request"
-// @Failure 401 {object} map[string]interface{} "Unauthorized"
+// @Param request body domain.LoginRequest true "Login credentials (one identifier + password)"
+// @Success 200 {object} map[string]interface{} "Login successful, returns JWT token"
+// @Failure 400 {object} map[string]interface{} "No identifier provided (need employee_id, email, or phone_number)"
+// @Failure 401 {object} map[string]interface{} "Account not found or wrong password"
 // @Router /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req domain.LoginRequest
