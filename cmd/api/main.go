@@ -8,15 +8,20 @@ import (
 	"syscall"
 	"time"
 
+	"fmt"
+
 	"hris-backend/internal/config"
 	"hris-backend/internal/delivery/http/handler"
 	"hris-backend/internal/repository/postgres"
 	"hris-backend/internal/repository/redis"
 	"hris-backend/internal/usecase"
+	"hris-backend/internal/worker"
 	"hris-backend/pkg/database"
 	"hris-backend/pkg/logger"
+	"hris-backend/pkg/mail"
 
 	"github.com/gin-gonic/gin"
+	"github.com/hibiken/asynq"
 	"github.com/rs/zerolog/log"
 
 	_ "hris-backend/docs"
@@ -55,9 +60,22 @@ func main() {
 	breakRepo := postgres.NewAttendanceBreakRepository(database.DB)
 	scheduleRepo := postgres.NewEmployeeScheduleRepository(database.DB)
 
+	// worker setup
+	redisAddr := fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT"))
+	asynqClient := asynq.NewClient(asynq.RedisClientOpt{
+		Addr:     redisAddr,
+		Password: os.Getenv("REDIS_PASSWORD"),
+	})
+	defer asynqClient.Close()
+
+	emailEnqueuer := redis.NewEmailTaskEnqueuer(asynqClient)
+	mailSender := mail.NewGoMailSender()
+	workerServer := worker.NewWorkerServer(redisAddr, os.Getenv("REDIS_PASSWORD"), mailSender)
+	workerServer.Start()
+
 	// usecases setup
 	empUsecase := usecase.NewEmployeeUsecase(seqRepo, empRepo, compRepo)
-	authUsecase := usecase.NewAuthUsecase(empRepo, otpRepo)
+	authUsecase := usecase.NewAuthUsecase(empRepo, otpRepo, emailEnqueuer)
 	attendanceUsecase := usecase.NewAttendanceUsecase(empRepo, compRepo, attendanceRepo, breakRepo, scheduleRepo)
 
 	// Setup GIN
@@ -98,6 +116,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 	log.Info().Msg("Shutting down server...")
+	workerServer.Shutdown()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
