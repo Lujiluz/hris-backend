@@ -23,6 +23,20 @@ var (
 // MaxAllowedAccuracyMeters is the worst acceptable GPS accuracy.
 const MaxAllowedAccuracyMeters = 50.0
 
+// Attendance status constants
+const (
+	AttendanceStatusIdle      = "idle"       // No attendance record for today
+	AttendanceStatusClockedIn = "clocked_in" // Employee is actively working
+	AttendanceStatusOnBreak   = "on_break"   // Employee is on break
+	AttendanceStatusClockedOut = "clocked_out" // Employee has clocked out
+)
+
+// Break action constants
+const (
+	BreakActionStart = "start"
+	BreakActionEnd   = "end"
+)
+
 // --- Entities ---
 
 type AttendanceRecord struct {
@@ -105,77 +119,78 @@ type AttendanceUsecase interface {
 // --- DTOs ---
 
 type ValidateLocationRequest struct {
-	Latitude  *float64 `json:"latitude"  binding:"required"`
-	Longitude *float64 `json:"longitude" binding:"required"`
+	Latitude  *float64 `json:"latitude"  binding:"required" example:"-6.2088"`
+	Longitude *float64 `json:"longitude" binding:"required" example:"106.8456"`
 
-	AccuracyMeters float64 `json:"accuracy_meters" binding:"required,gt=0"`
+	AccuracyMeters float64 `json:"accuracy_meters" binding:"required,gt=0" example:"10.5"`
 
-	IsMockLocation bool `json:"is_mock_location"`
+	IsMockLocation bool `json:"is_mock_location" example:"false"`
 
-	CompanyID string // Injected by handler from JWT claims, NOT from JSON body
+	CompanyID string `json:"-" swaggerignore:"true"` // Injected by handler from JWT claims
 }
 
 type ValidateLocationResponse struct {
-	IsInsideGeofence    bool    `json:"is_inside_geofence"`
-	DistanceMeters      float64 `json:"distance_meters"`
-	AllowedRadiusMeters float64 `json:"allowed_radius_meters"`
+	IsInsideGeofence    bool    `json:"is_inside_geofence" example:"true"`
+	DistanceMeters      float64 `json:"distance_meters" example:"45.2"`
+	AllowedRadiusMeters float64 `json:"allowed_radius_meters" example:"100"`
 }
 
 type ClockInRequest struct {
-	SelfieURL  string   `json:"selfie_url"  binding:"required"`
-	Latitude   *float64 `json:"latitude"    binding:"required"`
-	Longitude  *float64 `json:"longitude"   binding:"required"`
-	Notes      *string  `json:"notes"`
-	EmployeeID string
-	CompanyID  uuid.UUID
+	SelfieURL  string   `json:"selfie_url"  binding:"required" example:"https://res.cloudinary.com/xxx/image/upload/selfie.jpg"`
+	Latitude   *float64 `json:"latitude"    binding:"required" example:"-6.2088"`
+	Longitude  *float64 `json:"longitude"   binding:"required" example:"106.8456"`
+	Notes      *string  `json:"notes" example:"Working from office today"`
+	EmployeeID string   `json:"-" swaggerignore:"true"`
+	CompanyID  uuid.UUID `json:"-" swaggerignore:"true"`
 }
 
 type ClockInResponse struct {
-	ID        uuid.UUID `json:"id"`
-	ClockInAt time.Time `json:"clock_in_at"`
-	Status    string    `json:"status"`
+	ID        uuid.UUID `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	ClockInAt time.Time `json:"clock_in_at" example:"2026-03-12T08:00:00Z"`
+	Status    string    `json:"status" example:"clocked_in" enums:"clocked_in"`
 }
 
 type BreakRequest struct {
-	Action     string `json:"action" binding:"required"`
-	EmployeeID string
+	Action     string `json:"action" binding:"required" example:"start" enums:"start,end"`
+	EmployeeID string `json:"-" swaggerignore:"true"`
 }
 
 type BreakResponse struct {
-	Action    string    `json:"action"`
-	Timestamp time.Time `json:"timestamp"`
-	Status    string    `json:"status"`
+	Action    string    `json:"action" example:"start" enums:"start,end"`
+	Timestamp time.Time `json:"timestamp" example:"2026-03-12T12:00:00Z"`
+	Status    string    `json:"status" example:"on_break" enums:"clocked_in,on_break"`
 }
 
 type ClockOutPreview struct {
-	WorkingMinutes      int        `json:"working_minutes"`
-	OvertimeMinutes     int        `json:"overtime_minutes"`
-	ScheduledClockOutAt *time.Time `json:"scheduled_clock_out_at"`
-	CurrentTime         time.Time  `json:"current_time"`
+	WorkingMinutes      int        `json:"working_minutes" example:"480"`
+	OvertimeMinutes     int        `json:"overtime_minutes" example:"30"`
+	ScheduledClockOutAt *time.Time `json:"scheduled_clock_out_at" example:"2026-03-12T17:00:00Z"`
+	CurrentTime         time.Time  `json:"current_time" example:"2026-03-12T17:30:00Z"`
 }
 
 type ClockOutResponse struct {
-	ClockOutAt     time.Time `json:"clock_out_at"`
-	WorkingMinutes int       `json:"working_minutes"`
-	OvertimeMinutes int      `json:"overtime_minutes"`
-	Status         string    `json:"status"`
+	ClockOutAt      time.Time `json:"clock_out_at" example:"2026-03-12T17:30:00Z"`
+	WorkingMinutes  int       `json:"working_minutes" example:"480"`
+	OvertimeMinutes int       `json:"overtime_minutes" example:"30"`
+	Status          string    `json:"status" example:"clocked_out" enums:"clocked_out"`
 }
 
 type TodayStatusResponse struct {
-	Status            string     `json:"status"`
-	AttendanceID      *uuid.UUID `json:"attendance_id,omitempty"`
-	ClockInAt         *time.Time `json:"clock_in_at,omitempty"`
-	ClockOutAt        *time.Time `json:"clock_out_at,omitempty"`
-	IsOnBreak         bool       `json:"is_on_break,omitempty"`
-	OpenBreakStartAt  *time.Time `json:"open_break_start_at,omitempty"`
-	Notes             *string    `json:"notes,omitempty"`
+	// Status represents the current attendance state of the employee for today.
+	Status           string     `json:"status" example:"clocked_in" enums:"idle,clocked_in,on_break,clocked_out"`
+	AttendanceID     *uuid.UUID `json:"attendance_id,omitempty" example:"550e8400-e29b-41d4-a716-446655440000"`
+	ClockInAt        *time.Time `json:"clock_in_at,omitempty" example:"2026-03-12T08:00:00Z"`
+	ClockOutAt       *time.Time `json:"clock_out_at,omitempty" example:"2026-03-12T17:00:00Z"`
+	IsOnBreak        bool       `json:"is_on_break,omitempty" example:"false"`
+	OpenBreakStartAt *time.Time `json:"open_break_start_at,omitempty" example:"2026-03-12T12:00:00Z"`
+	Notes            *string    `json:"notes,omitempty" example:"Working from office today"`
 }
 
 type RegisterSelfieRequest struct {
-	SelfieURL string `json:"selfie_url" binding:"required,url"`
+	SelfieURL string `json:"selfie_url" binding:"required,url" example:"https://res.cloudinary.com/xxx/image/upload/selfie.jpg"`
 }
 
 type SelfieStatusResponse struct {
-	SelfieURL    string    `json:"selfie_url"`
-	RegisteredAt time.Time `json:"registered_at"`
+	SelfieURL    string    `json:"selfie_url" example:"https://res.cloudinary.com/xxx/image/upload/selfie.jpg"`
+	RegisteredAt time.Time `json:"registered_at" example:"2026-03-12T08:00:00Z"`
 }

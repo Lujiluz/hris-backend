@@ -97,7 +97,7 @@ func (uc *attendanceUsecase) ClockIn(ctx context.Context, req *domain.ClockInReq
 		EmployeeID:       empUUID,
 		CompanyID:        req.CompanyID,
 		WorkDate:         today,
-		Status:           "clocked_in",
+		Status:           domain.AttendanceStatusClockedIn,
 		ClockInAt:        now,
 		ClockInLatitude:  *req.Latitude,
 		ClockInLongitude: *req.Longitude,
@@ -135,7 +135,7 @@ func (uc *attendanceUsecase) ClockIn(ctx context.Context, req *domain.ClockInReq
 }
 
 func (uc *attendanceUsecase) ToggleBreak(ctx context.Context, req *domain.BreakRequest) (*domain.BreakResponse, error) {
-	if req.Action != "start" && req.Action != "end" {
+	if req.Action != domain.BreakActionStart && req.Action != domain.BreakActionEnd {
 		return nil, domain.ErrInvalidBreakAction
 	}
 
@@ -154,12 +154,12 @@ func (uc *attendanceUsecase) ToggleBreak(ctx context.Context, req *domain.BreakR
 	if record == nil {
 		return nil, domain.ErrNotClockedIn
 	}
-	if record.Status == "clocked_out" {
+	if record.Status == domain.AttendanceStatusClockedOut {
 		return nil, domain.ErrAlreadyClockedOut
 	}
 
-	if req.Action == "start" {
-		if record.Status == "on_break" {
+	if req.Action == domain.BreakActionStart {
+		if record.Status == domain.AttendanceStatusOnBreak {
 			return nil, domain.ErrAlreadyOnBreak
 		}
 		b := &domain.AttendanceBreak{
@@ -171,10 +171,10 @@ func (uc *attendanceUsecase) ToggleBreak(ctx context.Context, req *domain.BreakR
 		if err := uc.breakRepo.StartBreak(ctx, b); err != nil {
 			return nil, err
 		}
-		if err := uc.attendanceRepo.UpdateStatus(ctx, record.ID, "on_break"); err != nil {
+		if err := uc.attendanceRepo.UpdateStatus(ctx, record.ID, domain.AttendanceStatusOnBreak); err != nil {
 			return nil, err
 		}
-		return &domain.BreakResponse{Action: "start", Timestamp: now, Status: "on_break"}, nil
+		return &domain.BreakResponse{Action: domain.BreakActionStart, Timestamp: now, Status: domain.AttendanceStatusOnBreak}, nil
 	}
 
 	// action == "end"
@@ -188,10 +188,10 @@ func (uc *attendanceUsecase) ToggleBreak(ctx context.Context, req *domain.BreakR
 	if err := uc.breakRepo.EndLatestBreak(ctx, record.ID, now); err != nil {
 		return nil, err
 	}
-	if err := uc.attendanceRepo.UpdateStatus(ctx, record.ID, "clocked_in"); err != nil {
+	if err := uc.attendanceRepo.UpdateStatus(ctx, record.ID, domain.AttendanceStatusClockedIn); err != nil {
 		return nil, err
 	}
-	return &domain.BreakResponse{Action: "end", Timestamp: now, Status: "clocked_in"}, nil
+	return &domain.BreakResponse{Action: domain.BreakActionEnd, Timestamp: now, Status: domain.AttendanceStatusClockedIn}, nil
 }
 
 func (uc *attendanceUsecase) GetClockOutPreview(ctx context.Context, employeeID string, companyID uuid.UUID) (*domain.ClockOutPreview, error) {
@@ -210,7 +210,7 @@ func (uc *attendanceUsecase) GetClockOutPreview(ctx context.Context, employeeID 
 	if record == nil {
 		return nil, domain.ErrNotClockedIn
 	}
-	if record.Status == "clocked_out" {
+	if record.Status == domain.AttendanceStatusClockedOut {
 		return nil, domain.ErrAlreadyClockedOut
 	}
 
@@ -220,7 +220,7 @@ func (uc *attendanceUsecase) GetClockOutPreview(ctx context.Context, employeeID 
 	}
 
 	// If on break, include open break duration in the sum
-	if record.Status == "on_break" {
+	if record.Status == domain.AttendanceStatusOnBreak {
 		openBreak, err := uc.breakRepo.GetOpenBreak(ctx, record.ID)
 		if err != nil {
 			return nil, err
@@ -264,12 +264,12 @@ func (uc *attendanceUsecase) ClockOut(ctx context.Context, employeeID string, co
 	if record == nil {
 		return nil, domain.ErrNotClockedIn
 	}
-	if record.Status == "clocked_out" {
+	if record.Status == domain.AttendanceStatusClockedOut {
 		return nil, domain.ErrAlreadyClockedOut
 	}
 
 	// Auto-end open break if on break
-	if record.Status == "on_break" {
+	if record.Status == domain.AttendanceStatusOnBreak {
 		if err := uc.breakRepo.EndLatestBreak(ctx, record.ID, now); err != nil {
 			return nil, err
 		}
@@ -291,7 +291,7 @@ func (uc *attendanceUsecase) ClockOut(ctx context.Context, employeeID string, co
 	}
 
 	record.ClockOutAt = &now
-	record.Status = "clocked_out"
+	record.Status = domain.AttendanceStatusClockedOut
 	record.WorkingMinutes = &workingMinutes
 	record.OvertimeMinutes = &overtimeMinutes
 
@@ -303,7 +303,7 @@ func (uc *attendanceUsecase) ClockOut(ctx context.Context, employeeID string, co
 		ClockOutAt:      now,
 		WorkingMinutes:  workingMinutes,
 		OvertimeMinutes: overtimeMinutes,
-		Status:          "clocked_out",
+		Status:          domain.AttendanceStatusClockedOut,
 	}, nil
 }
 
@@ -346,7 +346,7 @@ func (uc *attendanceUsecase) GetTodayStatus(ctx context.Context, employeeID stri
 		return nil, err
 	}
 	if record == nil {
-		return &domain.TodayStatusResponse{Status: "idle"}, nil
+		return &domain.TodayStatusResponse{Status: domain.AttendanceStatusIdle}, nil
 	}
 
 	resp := &domain.TodayStatusResponse{
@@ -357,7 +357,7 @@ func (uc *attendanceUsecase) GetTodayStatus(ctx context.Context, employeeID stri
 		Notes:        record.Notes,
 	}
 
-	if record.Status == "on_break" {
+	if record.Status == domain.AttendanceStatusOnBreak {
 		resp.IsOnBreak = true
 		openBreak, err := uc.breakRepo.GetOpenBreak(ctx, record.ID)
 		if err != nil {
