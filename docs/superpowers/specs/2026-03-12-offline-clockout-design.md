@@ -8,6 +8,7 @@
 Add offline-first clock-out support to the HRIS attendance service. Mobile clients that lose connectivity reconstruct an accurate clock-out timestamp from a previously synced server time and device uptime delta. The backend validates and trusts this reconstructed timestamp within a configurable window.
 
 Two changes are required:
+
 1. A new `GET /api/v1/time` endpoint for server time synchronisation.
 2. An updated `POST /api/v1/attendance/clock-out` that accepts an optional `client_timestamp`.
 
@@ -22,12 +23,15 @@ Two changes are required:
 **Purpose:** Mobile syncs server time on every app open/foreground to anchor offline timestamp reconstruction.
 
 ### Response 200
+
 ```json
 { "server_time": "2026-03-12T17:00:00+07:00" }
 ```
+
 Format: RFC3339 with timezone offset via `time.Now().Format(time.RFC3339)`.
 
 ### Implementation
+
 - New file: `internal/delivery/http/handler/utility_handler.go`
 - Struct: `UtilityHandler{}` — no fields, no dependencies
 - Constructor: `func NewUtilityHandler(r *gin.RouterGroup)` — no second argument (differs from other handlers that take a usecase)
@@ -39,6 +43,7 @@ Format: RFC3339 with timezone offset via `time.Now().Format(time.RFC3339)`.
 ## 2. Updated Endpoint: POST /api/v1/attendance/clock-out
 
 ### Request Body (all fields optional)
+
 ```json
 {
   "client_timestamp": "2026-03-12T17:00:00+07:00",
@@ -47,6 +52,7 @@ Format: RFC3339 with timezone offset via `time.Now().Format(time.RFC3339)`.
 ```
 
 ### Timestamp Resolution (priority order)
+
 1. `client_timestamp` provided → validate → use as `clock_out_at`
 2. `client_timestamp` absent → use `time.Now()` (existing behaviour)
 
@@ -54,10 +60,10 @@ Format: RFC3339 with timezone offset via `time.Now().Format(time.RFC3339)`.
 
 Capture `now := time.Now()` once at the top of the usecase `ClockOut` method and reuse it for all comparisons and calculations.
 
-| Rule | Reference point | Error response |
-|---|---|---|
-| Not valid RFC3339 | — | 400 `invalid client_timestamp format, expected RFC3339` |
-| `t.After(now)` | `now` captured above; strict, no clock-skew tolerance | 400 `client_timestamp is in the future` |
+| Rule                              | Reference point                                                      | Error response                                                  |
+| --------------------------------- | -------------------------------------------------------------------- | --------------------------------------------------------------- |
+| Not valid RFC3339                 | —                                                                    | 400 `invalid client_timestamp format, expected RFC3339`         |
+| `t.After(now)`                    | `now` captured above; strict, no clock-skew tolerance                | 400 `client_timestamp is in the future`                         |
 | `now.Sub(t) > MaxOfflineDuration` | `now` captured above; measured from server now, not from `ClockInAt` | 400 `client_timestamp exceeds max offline duration of 24 hours` |
 
 ### Date boundary handling
@@ -71,15 +77,19 @@ workDate := time.Date(clockOutAt.Year(), clockOutAt.Month(), clockOutAt.Day(), 0
 Pass `workDate` to `GetTodayRecord` instead of `today` when `client_timestamp` is provided. When `client_timestamp` is absent, behaviour is unchanged (use `time.Now()` date as before).
 
 ### New Field on Attendance Record
+
 `is_offline_submission bool` — `true` when `client_timestamp` was used, `false` otherwise. Persisted to DB and included in `ClockOutResponse`.
 
 ### Notes field
+
 If `notes` is provided in the request (`req.Notes != nil`), persist it. If absent, leave the existing value unchanged. Explicitly setting `notes` to JSON `null` is treated the same as omitting the field (i.e., clearing a note is out of scope for this endpoint).
 
 ### GetClockOutPreview — intentionally unchanged
+
 `GetClockOutPreview` always uses `time.Now()`. The preview is an estimate; a slight divergence when an offline timestamp is used is acceptable.
 
 ### Existing Error Responses (unchanged)
+
 - 401: missing/invalid JWT
 - 404: no record found for the resolved `work_date`
 - 409: already clocked out
@@ -90,12 +100,14 @@ If `notes` is provided in the request (`req.Notes != nil`), persist it. If absen
 ## 3. Database Migration
 
 File: `migrations/000012_add_offline_clockout.up.sql`
+
 ```sql
 ALTER TABLE attendance_records
   ADD COLUMN is_offline_submission BOOLEAN NOT NULL DEFAULT FALSE;
 ```
 
 File: `migrations/000012_add_offline_clockout.down.sql`
+
 ```sql
 ALTER TABLE attendance_records DROP COLUMN is_offline_submission;
 ```
@@ -105,12 +117,15 @@ ALTER TABLE attendance_records DROP COLUMN is_offline_submission;
 ## 4. Domain Layer Changes (`internal/domain/attendance.go`)
 
 ### New constant
+
 ```go
 const MaxOfflineDuration = 24 * time.Hour
 ```
+
 Declare as `const` (consistent with `MaxAllowedAccuracyMeters` in the same file; `time.Duration` multiplication by an untyped constant is a valid const expression in Go).
 
 ### New error variables
+
 ```go
 ErrClientTimestampInFuture = errors.New("client_timestamp is in the future")
 ErrClientTimestampTooOld   = errors.New("client_timestamp exceeds max offline duration")
@@ -118,11 +133,13 @@ ErrInvalidClientTimestamp  = errors.New("invalid client_timestamp format, expect
 ```
 
 ### `AttendanceRecord` struct — new field (add after `OvertimeMinutes`)
+
 ```go
 IsOfflineSubmission bool `json:"is_offline_submission" gorm:"column:is_offline_submission;not null;default:false"`
 ```
 
 ### New request DTO
+
 ```go
 type ClockOutRequest struct {
     ClientTimestamp *string `json:"client_timestamp"`
@@ -131,6 +148,7 @@ type ClockOutRequest struct {
 ```
 
 ### Updated `ClockOutResponse` — add field
+
 ```go
 type ClockOutResponse struct {
     ClockOutAt          time.Time `json:"clock_out_at"`
@@ -142,11 +160,15 @@ type ClockOutResponse struct {
 ```
 
 ### `AttendanceUsecase` interface in `domain/attendance.go` — update signature
+
 Change:
+
 ```go
 ClockOut(ctx context.Context, employeeID string, companyID uuid.UUID) (*ClockOutResponse, error)
 ```
+
 To:
+
 ```go
 ClockOut(ctx context.Context, employeeID string, companyID uuid.UUID, req ClockOutRequest) (*ClockOutResponse, error)
 ```
@@ -158,11 +180,13 @@ ClockOut(ctx context.Context, employeeID string, companyID uuid.UUID, req ClockO
 ## 5. Usecase Layer Changes (`internal/usecase/attendance_uc.go`)
 
 **Updated method signature:**
+
 ```go
 func (u *attendanceUsecase) ClockOut(ctx context.Context, employeeID string, companyID uuid.UUID, req domain.ClockOutRequest) (*domain.ClockOutResponse, error)
 ```
 
 **At the top of the method**, capture server time once and resolve `clockOutAt`:
+
 ```go
 now := time.Now()
 clockOutAt := now
@@ -194,6 +218,7 @@ Replace the existing `today := time.Date(now.Year()...)` with `workDate` for the
 **Duration calculations:** replace all uses of `now` with `clockOutAt` for working minutes and overtime minutes.
 
 **Populate record before UpdateClockOut:**
+
 ```go
 record.ClockOutAt     = &clockOutAt
 record.Status         = domain.AttendanceStatusClockedOut
@@ -237,6 +262,7 @@ func (r *attendanceRepo) UpdateClockOut(ctx context.Context, record *domain.Atte
 ## 7. Handler Layer Changes
 
 ### `utility_handler.go` (new file)
+
 ```go
 package handler
 
@@ -261,6 +287,7 @@ func (h *UtilityHandler) GetServerTime(c *gin.Context) {
 ```
 
 ### `attendance_handler.go` — `ClockOut` method
+
 - Bind `domain.ClockOutRequest` from JSON body; no `binding:"required"` tags
 - Call `attendanceUsecase.ClockOut(ctx, employeeID, companyID, req)`
 - Add 3 new 400 error cases:
@@ -270,22 +297,24 @@ func (h *UtilityHandler) GetServerTime(c *gin.Context) {
 - Return `ClockOutResponse` including `is_offline_submission`
 
 ### `main.go`
+
 ```go
 handler.NewUtilityHandler(apiV1)
 ```
+
 Add this alongside existing handler registrations.
 
 ---
 
 ## Files Changed
 
-| File | Change |
-|---|---|
-| `migrations/000012_add_offline_clockout.up.sql` | New — add `is_offline_submission` column |
-| `migrations/000012_add_offline_clockout.down.sql` | New — drop column |
-| `internal/domain/attendance.go` | Add constant, errors, struct field with GORM tags, `ClockOutRequest` DTO, update `AttendanceUsecase.ClockOut` interface, update `ClockOutResponse` |
-| `internal/usecase/attendance_uc.go` | Update `ClockOut` signature, add timestamp resolution block, use `workDate` for record lookup, use `clockOutAt` for break close and duration calcs |
-| `internal/repository/postgres/attendance_repo.go` | Extend `UpdateClockOut` map with `is_offline_submission` and conditional `notes` |
-| `internal/delivery/http/handler/utility_handler.go` | New — `UtilityHandler`, `GetServerTime` |
-| `internal/delivery/http/handler/attendance_handler.go` | Update `ClockOut` handler: bind request, pass to usecase, map 3 new errors |
-| `cmd/api/main.go` | Add `handler.NewUtilityHandler(apiV1)` |
+| File                                                   | Change                                                                                                                                             |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `migrations/000012_add_offline_clockout.up.sql`        | New — add `is_offline_submission` column                                                                                                           |
+| `migrations/000012_add_offline_clockout.down.sql`      | New — drop column                                                                                                                                  |
+| `internal/domain/attendance.go`                        | Add constant, errors, struct field with GORM tags, `ClockOutRequest` DTO, update `AttendanceUsecase.ClockOut` interface, update `ClockOutResponse` |
+| `internal/usecase/attendance_uc.go`                    | Update `ClockOut` signature, add timestamp resolution block, use `workDate` for record lookup, use `clockOutAt` for break close and duration calcs |
+| `internal/repository/postgres/attendance_repo.go`      | Extend `UpdateClockOut` map with `is_offline_submission` and conditional `notes`                                                                   |
+| `internal/delivery/http/handler/utility_handler.go`    | New — `UtilityHandler`, `GetServerTime`                                                                                                            |
+| `internal/delivery/http/handler/attendance_handler.go` | Update `ClockOut` handler: bind request, pass to usecase, map 3 new errors                                                                         |
+| `cmd/api/main.go`                                      | Add `handler.NewUtilityHandler(apiV1)`                                                                                                             |
