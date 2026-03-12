@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"hris-backend/internal/domain"
@@ -101,9 +102,43 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	token, err := h.authUsecase.Login(c.Request.Context(), &req)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrIdentifierRequired):
+			c.JSON(http.StatusBadRequest, domain.NewFieldError("login failed", "identifier", "Provide employee_id, email, or phone_number"))
+		case errors.Is(err, domain.ErrAccountNotFound):
+			field := loginIdentifierField(&req)
+			c.JSON(http.StatusUnauthorized, domain.NewFieldError("login failed", field, identifierNotFoundMessage(field)))
+		case errors.Is(err, domain.ErrWrongPassword):
+			c.JSON(http.StatusUnauthorized, domain.NewFieldError("login failed", "password", "Wrong password"))
+		default:
+			c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "login successful", "token": token})
+}
+
+// loginIdentifierField returns the JSON field name of whichever identifier was provided.
+func loginIdentifierField(req *domain.LoginRequest) string {
+	switch {
+	case req.EmployeeID != "":
+		return "employee_id"
+	case req.Email != "":
+		return "email"
+	default:
+		return "phone_number"
+	}
+}
+
+// identifierNotFoundMessage returns a human-readable message for a missing account.
+func identifierNotFoundMessage(field string) string {
+	switch field {
+	case "email":
+		return "Email is not registered to any account"
+	case "employee_id":
+		return "Employee ID is not registered to any account"
+	default:
+		return "Phone number is not registered to any account"
+	}
 }
