@@ -80,15 +80,15 @@ func (uc *authUsecase) Login(ctx context.Context, req *domain.LoginRequest) (str
 	case req.PhoneNumber != "":
 		emp, err = uc.empRepo.GetByPhoneNumber(ctx, req.PhoneNumber)
 	default:
-		return "", errors.New("provide employee_id, email, or phone_number")
+		return "", domain.ErrIdentifierRequired
 	}
 
 	if err != nil {
-		return "", errors.New("invalid credentials")
+		return "", domain.ErrAccountNotFound
 	}
 
 	if bcrypt.CompareHashAndPassword([]byte(emp.Password), []byte(req.Password)) != nil {
-		return "", errors.New("invalid credentials")
+		return "", domain.ErrWrongPassword
 	}
 
 	token, err := jwt.GenerateToken(emp.EmployeeID, emp.Role, emp.CompanyID)
