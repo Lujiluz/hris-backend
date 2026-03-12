@@ -117,7 +117,7 @@ type AttendanceUsecase interface {
 	ClockIn(ctx context.Context, req *ClockInRequest) (*ClockInResponse, error)
 	ToggleBreak(ctx context.Context, req *BreakRequest) (*BreakResponse, error)
 	GetClockOutPreview(ctx context.Context, employeeID string, companyID uuid.UUID) (*ClockOutPreview, error)
-	ClockOut(ctx context.Context, employeeID string, companyID uuid.UUID) (*ClockOutResponse, error)
+	ClockOut(ctx context.Context, employeeID string, companyID uuid.UUID, req ClockOutRequest) (*ClockOutResponse, error)
 	GetTodayStatus(ctx context.Context, employeeID string) (*TodayStatusResponse, error)
 	RegisterSelfie(ctx context.Context, employeeID string, req *RegisterSelfieRequest) error
 	GetRegisteredSelfie(ctx context.Context, employeeID string) (*SelfieStatusResponse, error)

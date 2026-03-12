@@ -248,7 +248,7 @@ func (h *AttendanceHandler) ClockOut(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.attendanceUsecase.ClockOut(c.Request.Context(), employeeID, companyID)
+	resp, err := h.attendanceUsecase.ClockOut(c.Request.Context(), employeeID, companyID, domain.ClockOutRequest{})
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrNotClockedIn):

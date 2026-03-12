@@ -248,16 +248,37 @@ func (uc *attendanceUsecase) GetClockOutPreview(ctx context.Context, employeeID 
 	}, nil
 }
 
-func (uc *attendanceUsecase) ClockOut(ctx context.Context, employeeID string, companyID uuid.UUID) (*domain.ClockOutResponse, error) {
+func (uc *attendanceUsecase) ClockOut(ctx context.Context, employeeID string, companyID uuid.UUID, req domain.ClockOutRequest) (*domain.ClockOutResponse, error) {
+	now := time.Now()
+	clockOutAt := now
+	isOffline := false
+
+	// Validate client timestamp before any DB call — fail fast.
+	if req.ClientTimestamp != nil {
+		t, err := time.Parse(time.RFC3339, *req.ClientTimestamp)
+		if err != nil {
+			return nil, domain.ErrInvalidClientTimestamp
+		}
+		if t.After(now) {
+			return nil, domain.ErrClientTimestampInFuture
+		}
+		if now.Sub(t) > domain.MaxOfflineDuration {
+			return nil, domain.ErrClientTimestampTooOld
+		}
+		clockOutAt = t
+		isOffline = true
+	}
+
 	empUUID, err := uc.resolveEmployeeUUID(ctx, employeeID)
 	if err != nil {
 		return nil, err
 	}
 
-	now := time.Now()
-	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	// Derive work date from clockOutAt so midnight-spanning offline submissions find the right record.
+	// Use clockOutAt.Location() — same timezone strategy as the existing code.
+	workDate := time.Date(clockOutAt.Year(), clockOutAt.Month(), clockOutAt.Day(), 0, 0, 0, 0, clockOutAt.Location())
 
-	record, err := uc.attendanceRepo.GetTodayRecord(ctx, empUUID, today)
+	record, err := uc.attendanceRepo.GetTodayRecord(ctx, empUUID, workDate)
 	if err != nil {
 		return nil, err
 	}
@@ -268,9 +289,9 @@ func (uc *attendanceUsecase) ClockOut(ctx context.Context, employeeID string, co
 		return nil, domain.ErrAlreadyClockedOut
 	}
 
-	// Auto-end open break if on break
+	// Auto-end open break. Use clockOutAt so break_end_at <= clock_out_at is always maintained.
 	if record.Status == domain.AttendanceStatusOnBreak {
-		if err := uc.breakRepo.EndLatestBreak(ctx, record.ID, now); err != nil {
+		if err := uc.breakRepo.EndLatestBreak(ctx, record.ID, clockOutAt); err != nil {
 			return nil, err
 		}
 	}
@@ -280,30 +301,35 @@ func (uc *attendanceUsecase) ClockOut(ctx context.Context, employeeID string, co
 		return nil, err
 	}
 
-	workingMinutes := int(now.Sub(record.ClockInAt).Minutes()) - breakMinutes
+	workingMinutes := int(clockOutAt.Sub(record.ClockInAt).Minutes()) - breakMinutes
 	if workingMinutes < 0 {
 		workingMinutes = 0
 	}
 
 	overtimeMinutes := 0
-	if record.ScheduledClockOutAt != nil && now.After(*record.ScheduledClockOutAt) {
-		overtimeMinutes = int(now.Sub(*record.ScheduledClockOutAt).Minutes())
+	if record.ScheduledClockOutAt != nil && clockOutAt.After(*record.ScheduledClockOutAt) {
+		overtimeMinutes = int(clockOutAt.Sub(*record.ScheduledClockOutAt).Minutes())
 	}
 
-	record.ClockOutAt = &now
+	record.ClockOutAt = &clockOutAt
 	record.Status = domain.AttendanceStatusClockedOut
 	record.WorkingMinutes = &workingMinutes
 	record.OvertimeMinutes = &overtimeMinutes
+	record.IsOfflineSubmission = isOffline
+	if req.Notes != nil {
+		record.Notes = req.Notes // Overwrite note only when explicitly provided; nil = leave unchanged.
+	}
 
 	if err := uc.attendanceRepo.UpdateClockOut(ctx, record); err != nil {
 		return nil, err
 	}
 
 	return &domain.ClockOutResponse{
-		ClockOutAt:      now,
-		WorkingMinutes:  workingMinutes,
-		OvertimeMinutes: overtimeMinutes,
-		Status:          domain.AttendanceStatusClockedOut,
+		ClockOutAt:          clockOutAt,
+		WorkingMinutes:      workingMinutes,
+		OvertimeMinutes:     overtimeMinutes,
+		Status:              domain.AttendanceStatusClockedOut,
+		IsOfflineSubmission: isOffline,
 	}, nil
 }
 

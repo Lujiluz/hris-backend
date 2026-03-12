@@ -37,15 +37,18 @@ func (r *attendanceRepo) GetTodayRecord(ctx context.Context, employeeID uuid.UUI
 }
 
 func (r *attendanceRepo) UpdateClockOut(ctx context.Context, record *domain.AttendanceRecord) error {
-	return r.db.WithContext(ctx).
-		Model(record).
-		Updates(map[string]interface{}{
-			"clock_out_at":     record.ClockOutAt,
-			"status":           record.Status,
-			"working_minutes":  record.WorkingMinutes,
-			"overtime_minutes": record.OvertimeMinutes,
-			"updated_at":       time.Now(),
-		}).Error
+	updates := map[string]interface{}{
+		"clock_out_at":          record.ClockOutAt,
+		"status":                record.Status,
+		"working_minutes":       record.WorkingMinutes,
+		"overtime_minutes":      record.OvertimeMinutes,
+		"is_offline_submission": record.IsOfflineSubmission,
+		"updated_at":            time.Now(),
+	}
+	if record.Notes != nil {
+		updates["notes"] = *record.Notes
+	}
+	return r.db.WithContext(ctx).Model(record).Updates(updates).Error
 }
 
 func (r *attendanceRepo) UpdateStatus(ctx context.Context, id uuid.UUID, status string) error {
