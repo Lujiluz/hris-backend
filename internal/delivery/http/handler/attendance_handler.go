@@ -30,17 +30,20 @@ func NewAttendanceHandler(r *gin.RouterGroup, uc domain.AttendanceUsecase) {
 }
 
 // @Summary Validate employee GPS location against office geofence
+// @Description Checks if the employee's GPS coordinates fall within the company's configured office geofence.
+// @Description GPS accuracy must be ≤ 50 meters. Mock/fake GPS locations are rejected.
+// @Description Call this before clock-in to verify the employee is at the office.
 // @Tags Attendance
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param request body domain.ValidateLocationRequest true "Employee GPS coordinates"
-// @Success 200 {object} domain.ValidateLocationResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 422 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Success 200 {object} domain.ValidateLocationResponse "Location validation result"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 401 {object} map[string]interface{} "Missing or invalid JWT token"
+// @Failure 403 {object} map[string]interface{} "Mock/fake GPS location detected"
+// @Failure 422 {object} map[string]interface{} "GPS accuracy too low (>50m) or office location not configured"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /attendance/validate-location [post]
 func (h *AttendanceHandler) ValidateLocation(c *gin.Context) {
 	var req domain.ValidateLocationRequest
@@ -75,16 +78,19 @@ func (h *AttendanceHandler) ValidateLocation(c *gin.Context) {
 }
 
 // @Summary Clock in for today
+// @Description Records the employee's clock-in for today. Only one clock-in per day is allowed.
+// @Description The selfie_url should be a Cloudinary URL of the employee's face photo for verification.
+// @Description Latitude and longitude are stored for audit purposes.
 // @Tags Attendance
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param request body domain.ClockInRequest true "Clock-in details"
-// @Success 201 {object} domain.ClockInResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Success 201 {object} domain.ClockInResponse "Clock-in recorded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body"
+// @Failure 401 {object} map[string]interface{} "Missing or invalid JWT token"
+// @Failure 409 {object} map[string]interface{} "Already clocked in today"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /attendance/clock-in [post]
 func (h *AttendanceHandler) ClockIn(c *gin.Context) {
 	var req domain.ClockInRequest
@@ -115,17 +121,20 @@ func (h *AttendanceHandler) ClockIn(c *gin.Context) {
 }
 
 // @Summary Start or end a break
+// @Description Toggles a break for the employee. Action must be "start" or "end".
+// @Description Cannot start a break if already on break or already clocked out.
+// @Description Cannot end a break if not currently on break.
 // @Tags Attendance
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body domain.BreakRequest true "Break action (start or end)"
-// @Success 200 {object} domain.BreakResponse
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Param request body domain.BreakRequest true "Break action: 'start' or 'end'"
+// @Success 200 {object} domain.BreakResponse "Break toggled successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid action (must be 'start' or 'end')"
+// @Failure 401 {object} map[string]interface{} "Missing or invalid JWT token"
+// @Failure 404 {object} map[string]interface{} "No clock-in record found for today"
+// @Failure 409 {object} map[string]interface{} "Already on break / not on break / already clocked out"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /attendance/break [post]
 func (h *AttendanceHandler) ToggleBreak(c *gin.Context) {
 	var req domain.BreakRequest
@@ -161,12 +170,15 @@ func (h *AttendanceHandler) ToggleBreak(c *gin.Context) {
 }
 
 // @Summary Get today's attendance status
+// @Description Returns the employee's current attendance state for today.
+// @Description Status will be one of: "idle" (not clocked in), "clocked_in" (working), "on_break" (on break), "clocked_out" (done for today).
+// @Description Fields like attendance_id, clock_in_at, clock_out_at, and break info are only present when applicable.
 // @Tags Attendance
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} domain.TodayStatusResponse
-// @Failure 401 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Success 200 {object} domain.TodayStatusResponse "Today's attendance status"
+// @Failure 401 {object} map[string]interface{} "Missing or invalid JWT token"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /attendance/today [get]
 func (h *AttendanceHandler) GetTodayStatus(c *gin.Context) {
 	employeeID, _, ok := extractClaims(c)
@@ -184,14 +196,17 @@ func (h *AttendanceHandler) GetTodayStatus(c *gin.Context) {
 }
 
 // @Summary Get clock-out preview (working time and overtime estimate)
+// @Description Returns an estimate of working minutes and overtime minutes if the employee were to clock out now.
+// @Description Break time is subtracted from working minutes. Overtime is calculated against the employee's schedule.
+// @Description Use this to show the employee a preview before they confirm clock-out.
 // @Tags Attendance
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} domain.ClockOutPreview
-// @Failure 401 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Success 200 {object} domain.ClockOutPreview "Clock-out preview with time estimates"
+// @Failure 401 {object} map[string]interface{} "Missing or invalid JWT token"
+// @Failure 404 {object} map[string]interface{} "No clock-in record found for today"
+// @Failure 409 {object} map[string]interface{} "Already clocked out"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /attendance/clockout-preview [get]
 func (h *AttendanceHandler) GetClockOutPreview(c *gin.Context) {
 	employeeID, companyID, ok := extractClaims(c)
@@ -216,14 +231,16 @@ func (h *AttendanceHandler) GetClockOutPreview(c *gin.Context) {
 }
 
 // @Summary Clock out for today
+// @Description Records the employee's clock-out for today. Automatically ends any open break.
+// @Description Returns the final working minutes (excluding break time) and overtime minutes.
 // @Tags Attendance
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} domain.ClockOutResponse
-// @Failure 401 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Success 200 {object} domain.ClockOutResponse "Clock-out recorded successfully"
+// @Failure 401 {object} map[string]interface{} "Missing or invalid JWT token"
+// @Failure 404 {object} map[string]interface{} "No clock-in record found for today"
+// @Failure 409 {object} map[string]interface{} "Already clocked out"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /attendance/clock-out [post]
 func (h *AttendanceHandler) ClockOut(c *gin.Context) {
 	employeeID, companyID, ok := extractClaims(c)
@@ -248,16 +265,18 @@ func (h *AttendanceHandler) ClockOut(c *gin.Context) {
 }
 
 // @Summary Register employee selfie for face recognition
+// @Description Registers a selfie URL (Cloudinary) for the employee. Can only be registered once.
+// @Description The selfie is used for face verification during clock-in.
 // @Tags Attendance
 // @Accept json
 // @Produce json
 // @Security BearerAuth
 // @Param request body domain.RegisterSelfieRequest true "Cloudinary selfie URL"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 409 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Success 200 {object} map[string]interface{} "Selfie registered successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid request body or URL"
+// @Failure 401 {object} map[string]interface{} "Missing or invalid JWT token"
+// @Failure 409 {object} map[string]interface{} "Selfie already registered for this employee"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /attendance/register [post]
 func (h *AttendanceHandler) RegisterSelfie(c *gin.Context) {
 	var req domain.RegisterSelfieRequest
@@ -285,13 +304,15 @@ func (h *AttendanceHandler) RegisterSelfie(c *gin.Context) {
 }
 
 // @Summary Get registered selfie for the authenticated employee
+// @Description Returns the employee's registered selfie URL and registration timestamp.
+// @Description Returns 404 if no selfie has been registered yet.
 // @Tags Attendance
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} domain.SelfieStatusResponse
-// @Failure 401 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
+// @Success 200 {object} domain.SelfieStatusResponse "Registered selfie info"
+// @Failure 401 {object} map[string]interface{} "Missing or invalid JWT token"
+// @Failure 404 {object} map[string]interface{} "No selfie registered for this employee"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
 // @Router /attendance/register [get]
 func (h *AttendanceHandler) GetRegisteredSelfie(c *gin.Context) {
 	employeeID, _, ok := extractClaims(c)
