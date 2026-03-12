@@ -2,6 +2,8 @@ package handler
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 
 	"hris-backend/internal/delivery/http/middleware"
@@ -232,11 +234,15 @@ func (h *AttendanceHandler) GetClockOutPreview(c *gin.Context) {
 
 // @Summary Clock out for today
 // @Description Records the employee's clock-out for today. Automatically ends any open break.
-// @Description Returns the final working minutes (excluding break time) and overtime minutes.
+// @Description Accepts an optional client_timestamp (RFC3339) for offline-first submissions.
+// @Description If client_timestamp is omitted, server time is used.
 // @Tags Attendance
+// @Accept json
 // @Produce json
 // @Security BearerAuth
+// @Param request body domain.ClockOutRequest false "Optional clock-out request body"
 // @Success 200 {object} domain.ClockOutResponse "Clock-out recorded successfully"
+// @Failure 400 {object} map[string]interface{} "Invalid or out-of-range client_timestamp"
 // @Failure 401 {object} map[string]interface{} "Missing or invalid JWT token"
 // @Failure 404 {object} map[string]interface{} "No clock-in record found for today"
 // @Failure 409 {object} map[string]interface{} "Already clocked out"
@@ -248,9 +254,21 @@ func (h *AttendanceHandler) ClockOut(c *gin.Context) {
 		return
 	}
 
-	resp, err := h.attendanceUsecase.ClockOut(c.Request.Context(), employeeID, companyID, domain.ClockOutRequest{})
+	var req domain.ClockOutRequest
+	if err := c.ShouldBindJSON(&req); err != nil && !errors.Is(err, io.EOF) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	resp, err := h.attendanceUsecase.ClockOut(c.Request.Context(), employeeID, companyID, req)
 	if err != nil {
 		switch {
+		case errors.Is(err, domain.ErrInvalidClientTimestamp):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case errors.Is(err, domain.ErrClientTimestampInFuture):
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		case errors.Is(err, domain.ErrClientTimestampTooOld):
+			c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("client_timestamp exceeds max offline duration of %d hours", int(domain.MaxOfflineDuration.Hours()))})
 		case errors.Is(err, domain.ErrNotClockedIn):
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		case errors.Is(err, domain.ErrAlreadyClockedOut):
