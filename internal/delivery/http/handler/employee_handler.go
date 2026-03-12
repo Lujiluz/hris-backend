@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"errors"
 	"hris-backend/internal/domain"
 	"net/http"
 
@@ -27,20 +28,31 @@ func NewEmployeeHandler(r *gin.RouterGroup, us domain.EmployeeUsecase) {
 // @Produce json
 // @Param request body domain.RegisterRequest true "Payload Registrasi Karyawan"
 // @Success 201 {object} map[string]interface{} "Berhasil mendaftarkan karyawan"
-// @Failure 400 {object} map[string]interface{} "Bad Request (Format JSON salah atau validasi gagal)"
-// @Failure 500 {object} map[string]interface{} "Internal Server Error (Company code tidak valid atau gagal menyimpan data)"
+// @Failure 400 {object} domain.ErrorResponse "Bad Request (validasi gagal)"
+// @Failure 409 {object} domain.ErrorResponse "Conflict (email atau phone sudah terdaftar)"
+// @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /register [post]
 func (h *EmployeeHandler) Register(c *gin.Context) {
 	var req domain.RegisterRequest
 
-	// use c.ShouldBindJSON to handle validation by struct
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if err := h.employeeUsecase.Register(c.Request.Context(), &req); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		switch {
+		case errors.Is(err, domain.ErrInvalidEmailDomain):
+			c.JSON(http.StatusBadRequest, domain.NewFieldError("registration failed", "email", "The email you've provided is invalid"))
+		case errors.Is(err, domain.ErrInvalidCompanyCode):
+			c.JSON(http.StatusBadRequest, domain.NewFieldError("registration failed", "company_code", "Company code is not registered to any company"))
+		case errors.Is(err, domain.ErrEmailAlreadyRegistered):
+			c.JSON(http.StatusConflict, domain.NewFieldError("registration failed", "email", "Email is already registered"))
+		case errors.Is(err, domain.ErrPhoneAlreadyRegistered):
+			c.JSON(http.StatusConflict, domain.NewFieldError("registration failed", "phone_number", "Phone number is already registered"))
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
