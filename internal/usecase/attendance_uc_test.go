@@ -2,7 +2,6 @@ package usecase_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 	"time"
 
@@ -129,6 +128,10 @@ func TestClockOut_ValidClientTimestamp_UsesClientTime(t *testing.T) {
 	assert.True(t, resp.IsOfflineSubmission)
 	// ClockOutAt must match the client timestamp (within 1s for RFC3339 second truncation).
 	assert.WithinDuration(t, clientTime, resp.ClockOutAt, time.Second)
+	// workingMinutes = clockOutAt - clockInAt - breakMinutes = (now-2h) - (now-4h) - 0 = 120 min
+	// (int truncation may cause ±1 min variation due to precise timing)
+	assert.GreaterOrEqual(t, resp.WorkingMinutes, 119)
+	assert.LessOrEqual(t, resp.WorkingMinutes, 121)
 }
 
 func TestClockOut_InvalidRFC3339_ReturnsError(t *testing.T) {
@@ -195,6 +198,4 @@ func TestClockOut_MaxOfflineDurationBoundary_Succeeds(t *testing.T) {
 	})
 	assert.NoError(t, err)
 	assert.True(t, resp.IsOfflineSubmission)
-
-	fmt.Println("MaxOfflineDuration boundary test passed")
 }
