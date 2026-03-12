@@ -92,6 +92,7 @@ func main() {
 	handler.NewEmployeeHandler(apiV1, empUsecase)
 	handler.NewAuthHandler(apiV1, authUsecase)
 	handler.NewAttendanceHandler(apiV1, attendanceUsecase)
+	handler.NewUtilityHandler(apiV1)
 
 	// Simple Ping Route
 	router.GET("/ping", func(c *gin.Context) {
