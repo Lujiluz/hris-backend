@@ -9,18 +9,22 @@ import (
 
 	"hris-backend/internal/domain"
 	"hris-backend/pkg/jwt"
-	"hris-backend/pkg/mail"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type authUsecase struct {
-	empRepo domain.EmployeeRepository
-	otpRepo domain.OTPRepository
+	empRepo       domain.EmployeeRepository
+	otpRepo       domain.OTPRepository
+	emailEnqueuer domain.EmailTaskEnqueuer
 }
 
-func NewAuthUsecase(empRepo domain.EmployeeRepository, otpRepo domain.OTPRepository) domain.AuthUsecase {
-	return &authUsecase{empRepo: empRepo, otpRepo: otpRepo}
+func NewAuthUsecase(empRepo domain.EmployeeRepository, otpRepo domain.OTPRepository, emailEnqueuer domain.EmailTaskEnqueuer) domain.AuthUsecase {
+	return &authUsecase{
+		empRepo:       empRepo,
+		otpRepo:       otpRepo,
+		emailEnqueuer: emailEnqueuer,
+	}
 }
 
 func (uc *authUsecase) RequestOTP(ctx context.Context, req *domain.RequestOTPRequest) error {
@@ -29,16 +33,15 @@ func (uc *authUsecase) RequestOTP(ctx context.Context, req *domain.RequestOTPReq
 		return errors.New("email not registered")
 	}
 
-	rand.Seed(time.Now().UnixNano())
 	otpCode := fmt.Sprintf("%06d", rand.Intn(1000000))
 
-	err = uc.otpRepo.SetOTP(ctx, req.Email, otpCode, 5*time.Minute)
-	if err != nil {
+	if err = uc.otpRepo.SetOTP(ctx, req.Email, otpCode, 5*time.Minute); err != nil {
 		return errors.New("failed to generate OTP")
 	}
 
-	// TODO: use a worker to handle sending OTP
-	go mail.SendOTP(req.Email, otpCode)
+	if err = uc.emailEnqueuer.EnqueueOTPEmail(ctx, req.Email, otpCode); err != nil {
+		return errors.New("failed to queue OTP email")
+	}
 
 	return nil
 }
