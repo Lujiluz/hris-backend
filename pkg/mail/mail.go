@@ -23,6 +23,17 @@ const otpTemplateHTML = `
 </html>
 `
 
+// GoMailSender implements domain.MailSender using gomail.
+type GoMailSender struct{}
+
+func NewGoMailSender() *GoMailSender {
+	return &GoMailSender{}
+}
+
+func (s *GoMailSender) SendOTP(toEmail, otpCode string) error {
+	return SendOTP(toEmail, otpCode)
+}
+
 func SendOTP(toEmail string, otpCode string) error {
 	port, _ := strconv.Atoi(os.Getenv("SMTP_PORT"))
 	d := gomail.NewDialer(os.Getenv("SMTP_HOST"), port, os.Getenv("SMTP_USER"), os.Getenv("SMTP_PASS"))
