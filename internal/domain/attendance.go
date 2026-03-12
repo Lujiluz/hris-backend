@@ -17,11 +17,17 @@ var (
 	ErrAlreadyClockedOut    = errors.New("already clocked out")
 	ErrAlreadyOnBreak       = errors.New("already on break")
 	ErrNotOnBreak           = errors.New("not currently on break")
-	ErrInvalidBreakAction   = errors.New("invalid break action, must be 'start' or 'end'")
+	ErrInvalidBreakAction      = errors.New("invalid break action, must be 'start' or 'end'")
+	ErrClientTimestampInFuture = errors.New("client_timestamp is in the future")
+	ErrClientTimestampTooOld   = errors.New("client_timestamp exceeds max offline duration")
+	ErrInvalidClientTimestamp  = errors.New("invalid client_timestamp format, expected RFC3339")
 )
 
 // MaxAllowedAccuracyMeters is the worst acceptable GPS accuracy.
 const MaxAllowedAccuracyMeters = 50.0
+
+// MaxOfflineDuration is the maximum age of a client_timestamp accepted for offline clock-out.
+const MaxOfflineDuration = 24 * time.Hour
 
 // Attendance status constants
 const (
@@ -55,6 +61,7 @@ type AttendanceRecord struct {
 	ScheduledClockOutAt *time.Time
 	WorkingMinutes      *int
 	OvertimeMinutes     *int
+	IsOfflineSubmission bool       `json:"is_offline_submission" gorm:"column:is_offline_submission;not null;default:false"`
 	CreatedAt           time.Time  `gorm:"not null;default:now()"`
 	UpdatedAt           time.Time  `gorm:"not null;default:now()"`
 }
@@ -161,6 +168,11 @@ type BreakResponse struct {
 	Status    string    `json:"status" example:"on_break" enums:"clocked_in,on_break"`
 }
 
+type ClockOutRequest struct {
+	ClientTimestamp *string `json:"client_timestamp"`
+	Notes           *string `json:"notes"`
+}
+
 type ClockOutPreview struct {
 	WorkingMinutes      int        `json:"working_minutes" example:"480"`
 	OvertimeMinutes     int        `json:"overtime_minutes" example:"30"`
@@ -169,10 +181,11 @@ type ClockOutPreview struct {
 }
 
 type ClockOutResponse struct {
-	ClockOutAt      time.Time `json:"clock_out_at" example:"2026-03-12T17:30:00Z"`
-	WorkingMinutes  int       `json:"working_minutes" example:"480"`
-	OvertimeMinutes int       `json:"overtime_minutes" example:"30"`
-	Status          string    `json:"status" example:"clocked_out" enums:"clocked_out"`
+	ClockOutAt          time.Time `json:"clock_out_at" example:"2026-03-12T17:30:00Z"`
+	WorkingMinutes      int       `json:"working_minutes" example:"480"`
+	OvertimeMinutes     int       `json:"overtime_minutes" example:"30"`
+	Status              string    `json:"status" example:"clocked_out" enums:"clocked_out"`
+	IsOfflineSubmission bool      `json:"is_offline_submission" example:"false"`
 }
 
 type TodayStatusResponse struct {
