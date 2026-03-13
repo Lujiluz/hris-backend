@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"hris-backend/internal/delivery/http/middleware"
 	"hris-backend/internal/domain"
 	"net/http"
 
@@ -18,6 +19,11 @@ func NewEmployeeHandler(r *gin.RouterGroup, us domain.EmployeeUsecase) {
 	}
 
 	r.POST("/register", handler.Register)
+
+	// GET /employee/profile — JWT-protected
+	g := r.Group("/employee")
+	g.Use(middleware.JWTAuth())
+	g.GET("/profile", handler.GetProfile)
 }
 
 // Register godoc
@@ -57,4 +63,35 @@ func (h *EmployeeHandler) Register(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "employee registered successfully"})
+}
+
+// GetProfile godoc
+// @Summary Get authenticated employee profile
+// @Description Returns the profile of the currently authenticated employee: name, email, role, profile picture, and company info.
+// @Tags Employee
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} domain.EmployeeProfileResponse "Employee profile"
+// @Failure 401 {object} map[string]interface{} "Missing or invalid JWT token"
+// @Failure 404 {object} map[string]interface{} "Employee not found"
+// @Failure 500 {object} map[string]interface{} "Internal server error"
+// @Router /employee/profile [get]
+func (h *EmployeeHandler) GetProfile(c *gin.Context) {
+	employeeID, _, ok := extractClaims(c)
+	if !ok {
+		return
+	}
+
+	resp, err := h.employeeUsecase.GetProfile(c.Request.Context(), employeeID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrEmployeeNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
 }

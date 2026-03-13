@@ -1,49 +1,643 @@
 basePath: /api/v1
 definitions:
-  hris-backend_internal_domain.LoginRequest:
+  hris-backend_internal_domain.BreakRequest:
     properties:
-      employee_id:
-        type: string
-      password:
+      action:
+        enum:
+        - start
+        - end
+        example: start
         type: string
     required:
-    - employee_id
+    - action
+    type: object
+  hris-backend_internal_domain.BreakResponse:
+    properties:
+      action:
+        enum:
+        - start
+        - end
+        example: start
+        type: string
+      status:
+        enum:
+        - clocked_in
+        - on_break
+        example: on_break
+        type: string
+      timestamp:
+        example: "2026-03-12T12:00:00Z"
+        type: string
+    type: object
+  hris-backend_internal_domain.ClockInRequest:
+    properties:
+      latitude:
+        example: -6.2088
+        type: number
+      longitude:
+        example: 106.8456
+        type: number
+      notes:
+        example: Working from office today
+        type: string
+      selfie_url:
+        example: https://res.cloudinary.com/xxx/image/upload/selfie.jpg
+        type: string
+    required:
+    - latitude
+    - longitude
+    - selfie_url
+    type: object
+  hris-backend_internal_domain.ClockInResponse:
+    properties:
+      clock_in_at:
+        example: "2026-03-12T08:00:00Z"
+        type: string
+      id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      status:
+        enum:
+        - clocked_in
+        example: clocked_in
+        type: string
+    type: object
+  hris-backend_internal_domain.ClockOutPreview:
+    properties:
+      current_time:
+        example: "2026-03-12T17:30:00Z"
+        type: string
+      overtime_minutes:
+        example: 30
+        type: integer
+      scheduled_clock_out_at:
+        example: "2026-03-12T17:00:00Z"
+        type: string
+      working_minutes:
+        example: 480
+        type: integer
+    type: object
+  hris-backend_internal_domain.ClockOutRequest:
+    properties:
+      client_timestamp:
+        type: string
+      notes:
+        type: string
+    type: object
+  hris-backend_internal_domain.ClockOutResponse:
+    properties:
+      clock_out_at:
+        example: "2026-03-12T17:30:00Z"
+        type: string
+      is_offline_submission:
+        example: false
+        type: boolean
+      overtime_minutes:
+        example: 30
+        type: integer
+      status:
+        enum:
+        - clocked_out
+        example: clocked_out
+        type: string
+      working_minutes:
+        example: 480
+        type: integer
+    type: object
+  hris-backend_internal_domain.CompanyProfileData:
+    properties:
+      company_code:
+        type: string
+      company_name:
+        type: string
+    type: object
+  hris-backend_internal_domain.EmployeeProfileResponse:
+    properties:
+      company:
+        $ref: '#/definitions/hris-backend_internal_domain.CompanyProfileData'
+      email:
+        type: string
+      employee_id:
+        type: string
+      first_name:
+        type: string
+      last_name:
+        type: string
+      profile_picture:
+        type: string
+      role:
+        type: string
+    type: object
+  hris-backend_internal_domain.ErrorResponse:
+    properties:
+      errors:
+        additionalProperties:
+          type: string
+        type: object
+      message:
+        type: string
+    type: object
+  hris-backend_internal_domain.LoginRequest:
+    properties:
+      email:
+        example: john@company.com
+        type: string
+      employee_id:
+        example: GOTO-2026-0001
+        type: string
+      password:
+        example: secret123
+        type: string
+      phone_number:
+        example: "08123456789"
+        type: string
+    required:
     - password
+    type: object
+  hris-backend_internal_domain.RegisterRequest:
+    properties:
+      company_code:
+        type: string
+      email:
+        type: string
+      is_tnc_accepted:
+        type: boolean
+      password:
+        minLength: 6
+        type: string
+      phone_number:
+        type: string
+    required:
+    - company_code
+    - email
+    - is_tnc_accepted
+    - password
+    - phone_number
+    type: object
+  hris-backend_internal_domain.RegisterSelfieRequest:
+    properties:
+      selfie_url:
+        example: https://res.cloudinary.com/xxx/image/upload/selfie.jpg
+        type: string
+    required:
+    - selfie_url
     type: object
   hris-backend_internal_domain.RequestOTPRequest:
     properties:
       email:
+        example: john@company.com
         type: string
     required:
     - email
     type: object
+  hris-backend_internal_domain.SelfieStatusResponse:
+    properties:
+      registered_at:
+        example: "2026-03-12T08:00:00Z"
+        type: string
+      selfie_url:
+        example: https://res.cloudinary.com/xxx/image/upload/selfie.jpg
+        type: string
+    type: object
+  hris-backend_internal_domain.TodayStatusResponse:
+    properties:
+      attendance_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      clock_in_at:
+        example: "2026-03-12T08:00:00Z"
+        type: string
+      clock_out_at:
+        example: "2026-03-12T17:00:00Z"
+        type: string
+      is_on_break:
+        example: false
+        type: boolean
+      notes:
+        example: Working from office today
+        type: string
+      open_break_start_at:
+        example: "2026-03-12T12:00:00Z"
+        type: string
+      status:
+        description: Status represents the current attendance state of the employee
+          for today.
+        enum:
+        - idle
+        - clocked_in
+        - on_break
+        - clocked_out
+        example: clocked_in
+        type: string
+    type: object
+  hris-backend_internal_domain.ValidateLocationRequest:
+    properties:
+      accuracy_meters:
+        example: 10.5
+        type: number
+      is_mock_location:
+        example: false
+        type: boolean
+      latitude:
+        example: -6.2088
+        type: number
+      longitude:
+        example: 106.8456
+        type: number
+    required:
+    - accuracy_meters
+    - latitude
+    - longitude
+    type: object
+  hris-backend_internal_domain.ValidateLocationResponse:
+    properties:
+      allowed_radius_meters:
+        example: 100
+        type: number
+      distance_meters:
+        example: 45.2
+        type: number
+      is_inside_geofence:
+        example: true
+        type: boolean
+    type: object
   hris-backend_internal_domain.VerifyOTPRequest:
     properties:
       email:
+        example: john@company.com
         type: string
       otp:
+        example: "123456"
         type: string
     required:
     - email
     - otp
     type: object
-host: localhost:8080
+host: localhost:3030
 info:
   contact:
-    email: luji@hris-space.com
+    email: zlfjrii@gmail.com
     name: Luji API Support
   description: Ini adalah dokumentasi API untuk aplikasi mobile dan admin HRIS.
   termsOfService: http://swagger.io/terms/
   title: HRIS Backend API
   version: "1.0"
 paths:
+  /attendance/break:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Toggles a break for the employee. Action must be "start" or "end".
+        Cannot start a break if already on break or already clocked out.
+        Cannot end a break if not currently on break.
+      parameters:
+      - description: 'Break action: ''start'' or ''end'''
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/hris-backend_internal_domain.BreakRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Break toggled successfully
+          schema:
+            $ref: '#/definitions/hris-backend_internal_domain.BreakResponse'
+        "400":
+          description: Invalid action (must be 'start' or 'end')
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Missing or invalid JWT token
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: No clock-in record found for today
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Already on break / not on break / already clocked out
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Start or end a break
+      tags:
+      - Attendance
+  /attendance/clock-in:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Records the employee's clock-in for today. Only one clock-in per day is allowed.
+        The selfie_url should be a Cloudinary URL of the employee's face photo for verification.
+        Latitude and longitude are stored for audit purposes.
+      parameters:
+      - description: Clock-in details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/hris-backend_internal_domain.ClockInRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Clock-in recorded successfully
+          schema:
+            $ref: '#/definitions/hris-backend_internal_domain.ClockInResponse'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Missing or invalid JWT token
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Already clocked in today
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Clock in for today
+      tags:
+      - Attendance
+  /attendance/clock-out:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Records the employee's clock-out for today. Automatically ends any open break.
+        Accepts an optional client_timestamp (RFC3339) for offline-first submissions.
+        If client_timestamp is omitted, server time is used.
+      parameters:
+      - description: Optional clock-out request body
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/hris-backend_internal_domain.ClockOutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Clock-out recorded successfully
+          schema:
+            $ref: '#/definitions/hris-backend_internal_domain.ClockOutResponse'
+        "400":
+          description: Invalid or out-of-range client_timestamp
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Missing or invalid JWT token
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: No clock-in record found for today
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Already clocked out
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Clock out for today
+      tags:
+      - Attendance
+  /attendance/clockout-preview:
+    get:
+      description: |-
+        Returns an estimate of working minutes and overtime minutes if the employee were to clock out now.
+        Break time is subtracted from working minutes. Overtime is calculated against the employee's schedule.
+        Use this to show the employee a preview before they confirm clock-out.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Clock-out preview with time estimates
+          schema:
+            $ref: '#/definitions/hris-backend_internal_domain.ClockOutPreview'
+        "401":
+          description: Missing or invalid JWT token
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: No clock-in record found for today
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Already clocked out
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get clock-out preview (working time and overtime estimate)
+      tags:
+      - Attendance
+  /attendance/register:
+    get:
+      description: |-
+        Returns the employee's registered selfie URL and registration timestamp.
+        Returns 404 if no selfie has been registered yet.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Registered selfie info
+          schema:
+            $ref: '#/definitions/hris-backend_internal_domain.SelfieStatusResponse'
+        "401":
+          description: Missing or invalid JWT token
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: No selfie registered for this employee
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get registered selfie for the authenticated employee
+      tags:
+      - Attendance
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Registers a selfie URL (Cloudinary) for the employee. Can only be registered once.
+        The selfie is used for face verification during clock-in.
+      parameters:
+      - description: Cloudinary selfie URL
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/hris-backend_internal_domain.RegisterSelfieRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Selfie registered successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request body or URL
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Missing or invalid JWT token
+          schema:
+            additionalProperties: true
+            type: object
+        "409":
+          description: Selfie already registered for this employee
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Register employee selfie for face recognition
+      tags:
+      - Attendance
+  /attendance/today:
+    get:
+      description: |-
+        Returns the employee's current attendance state for today.
+        Status will be one of: "idle" (not clocked in), "clocked_in" (working), "on_break" (on break), "clocked_out" (done for today).
+        Fields like attendance_id, clock_in_at, clock_out_at, and break info are only present when applicable.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Today's attendance status
+          schema:
+            $ref: '#/definitions/hris-backend_internal_domain.TodayStatusResponse'
+        "401":
+          description: Missing or invalid JWT token
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get today's attendance status
+      tags:
+      - Attendance
+  /attendance/validate-location:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Checks if the employee's GPS coordinates fall within the company's configured office geofence.
+        GPS accuracy must be ≤ 50 meters. Mock/fake GPS locations are rejected.
+        Call this before clock-in to verify the employee is at the office.
+      parameters:
+      - description: Employee GPS coordinates
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/hris-backend_internal_domain.ValidateLocationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Location validation result
+          schema:
+            $ref: '#/definitions/hris-backend_internal_domain.ValidateLocationResponse'
+        "400":
+          description: Invalid request body
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Missing or invalid JWT token
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Mock/fake GPS location detected
+          schema:
+            additionalProperties: true
+            type: object
+        "422":
+          description: GPS accuracy too low (>50m) or office location not configured
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Validate employee GPS location against office geofence
+      tags:
+      - Attendance
   /auth/login:
     post:
       consumes:
       - application/json
-      description: Endpoint untuk mendapatkan JWT Token dengan verifikasi password
+      description: |-
+        Authenticate using password plus one of: employee_id, email, or phone_number.
+        Provide exactly one identifier field alongside the password. Returns a JWT token on success.
       parameters:
-      - description: Payload Login
+      - description: Login credentials (one identifier + password)
         in: body
         name: request
         required: true
@@ -53,30 +647,31 @@ paths:
       - application/json
       responses:
         "200":
-          description: Berhasil login, mengembalikan token
+          description: Login successful, returns JWT token
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: Bad Request (Format JSON salah)
+          description: No identifier provided (need employee_id, email, or phone_number)
           schema:
             additionalProperties: true
             type: object
         "401":
-          description: Unauthorized (Kredensial salah)
+          description: Account not found or wrong password
           schema:
             additionalProperties: true
             type: object
-      summary: Login menggunakan Employee ID dan Password
+      summary: Login with Employee ID, Email, or Phone Number
       tags:
       - Auth
   /auth/otp/request:
     post:
       consumes:
       - application/json
-      description: Endpoint untuk mengirimkan 6 digit OTP ke email yang terdaftar
+      description: Sends a 6-digit OTP code to the registered email address. OTP expires
+        after 5 minutes.
       parameters:
-      - description: Payload Request OTP
+      - description: Email address
         in: body
         name: request
         required: true
@@ -86,30 +681,31 @@ paths:
       - application/json
       responses:
         "200":
-          description: OTP berhasil dikirim
+          description: OTP sent successfully
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: Bad Request
+          description: Invalid request body or email format
           schema:
             additionalProperties: true
             type: object
         "401":
-          description: Email tidak terdaftar
+          description: Email is not registered
           schema:
             additionalProperties: true
             type: object
-      summary: Meminta kode OTP via Email
+      summary: Request a 6-digit OTP via email
       tags:
       - Auth
   /auth/otp/verify:
     post:
       consumes:
       - application/json
-      description: Endpoint untuk memvalidasi OTP dan mengembalikan JWT Token
+      description: Validates the 6-digit OTP code and returns a JWT token on success.
+        OTP is single-use and expires after 5 minutes.
       parameters:
-      - description: Payload Verify OTP
+      - description: Email and OTP code
         in: body
         name: request
         required: true
@@ -119,23 +715,115 @@ paths:
       - application/json
       responses:
         "200":
-          description: Berhasil verifikasi, mengembalikan token
+          description: OTP verified, returns JWT token
           schema:
             additionalProperties: true
             type: object
         "400":
-          description: Bad Request
+          description: Invalid request body
           schema:
             additionalProperties: true
             type: object
         "401":
-          description: OTP salah atau kadaluarsa
+          description: Invalid or expired OTP
           schema:
             additionalProperties: true
             type: object
-      summary: Verifikasi kode OTP dan Dapatkan Token
+      summary: Verify OTP and get JWT token
       tags:
       - Auth
+  /employee/profile:
+    get:
+      description: 'Returns the profile of the currently authenticated employee: name,
+        email, role, profile picture, and company info.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Employee profile
+          schema:
+            $ref: '#/definitions/hris-backend_internal_domain.EmployeeProfileResponse'
+        "401":
+          description: Missing or invalid JWT token
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Employee not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get authenticated employee profile
+      tags:
+      - Employee
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Endpoint untuk mendaftarkan karyawan baru ke dalam sistem HRIS.
+        Membutuhkan Company Code yang valid. Employee ID akan di-generate otomatis.
+      parameters:
+      - description: Payload Registrasi Karyawan
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/hris-backend_internal_domain.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Berhasil mendaftarkan karyawan
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request (validasi gagal)
+          schema:
+            $ref: '#/definitions/hris-backend_internal_domain.ErrorResponse'
+        "409":
+          description: Conflict (email atau phone sudah terdaftar)
+          schema:
+            $ref: '#/definitions/hris-backend_internal_domain.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Mendaftarkan karyawan baru
+      tags:
+      - Employee
+  /time:
+    get:
+      description: |-
+        Returns the current server time in RFC3339 format with timezone offset.
+        Used by mobile clients to anchor offline clock-out timestamp reconstruction.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Server time in RFC3339 format
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Missing or invalid JWT token
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get current server time
+      tags:
+      - Utility
 securityDefinitions:
   BearerAuth:
     in: header

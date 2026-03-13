@@ -6,16 +6,508 @@
         "termsOfService": "http://swagger.io/terms/",
         "contact": {
             "name": "Luji API Support",
-            "email": "luji@hris-space.com"
+            "email": "zlfjrii@gmail.com"
         },
         "version": "1.0"
     },
-    "host": "localhost:8080",
+    "host": "localhost:3030",
     "basePath": "/api/v1",
     "paths": {
+        "/attendance/break": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Toggles a break for the employee. Action must be \"start\" or \"end\".\nCannot start a break if already on break or already clocked out.\nCannot end a break if not currently on break.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Start or end a break",
+                "parameters": [
+                    {
+                        "description": "Break action: 'start' or 'end'",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.BreakRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Break toggled successfully",
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.BreakResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid action (must be 'start' or 'end')",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid JWT token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "No clock-in record found for today",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Already on break / not on break / already clocked out",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/clock-in": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records the employee's clock-in for today. Only one clock-in per day is allowed.\nThe selfie_url should be a Cloudinary URL of the employee's face photo for verification.\nLatitude and longitude are stored for audit purposes.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Clock in for today",
+                "parameters": [
+                    {
+                        "description": "Clock-in details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.ClockInRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Clock-in recorded successfully",
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.ClockInResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid JWT token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Already clocked in today",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/clock-out": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Records the employee's clock-out for today. Automatically ends any open break.\nAccepts an optional client_timestamp (RFC3339) for offline-first submissions.\nIf client_timestamp is omitted, server time is used.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Clock out for today",
+                "parameters": [
+                    {
+                        "description": "Optional clock-out request body",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.ClockOutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Clock-out recorded successfully",
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.ClockOutResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid or out-of-range client_timestamp",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid JWT token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "No clock-in record found for today",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Already clocked out",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/clockout-preview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns an estimate of working minutes and overtime minutes if the employee were to clock out now.\nBreak time is subtracted from working minutes. Overtime is calculated against the employee's schedule.\nUse this to show the employee a preview before they confirm clock-out.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Get clock-out preview (working time and overtime estimate)",
+                "responses": {
+                    "200": {
+                        "description": "Clock-out preview with time estimates",
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.ClockOutPreview"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid JWT token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "No clock-in record found for today",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Already clocked out",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/register": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the employee's registered selfie URL and registration timestamp.\nReturns 404 if no selfie has been registered yet.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Get registered selfie for the authenticated employee",
+                "responses": {
+                    "200": {
+                        "description": "Registered selfie info",
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.SelfieStatusResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid JWT token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "No selfie registered for this employee",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Registers a selfie URL (Cloudinary) for the employee. Can only be registered once.\nThe selfie is used for face verification during clock-in.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Register employee selfie for face recognition",
+                "parameters": [
+                    {
+                        "description": "Cloudinary selfie URL",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.RegisterSelfieRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Selfie registered successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body or URL",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid JWT token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "409": {
+                        "description": "Selfie already registered for this employee",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/today": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the employee's current attendance state for today.\nStatus will be one of: \"idle\" (not clocked in), \"clocked_in\" (working), \"on_break\" (on break), \"clocked_out\" (done for today).\nFields like attendance_id, clock_in_at, clock_out_at, and break info are only present when applicable.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Get today's attendance status",
+                "responses": {
+                    "200": {
+                        "description": "Today's attendance status",
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.TodayStatusResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid JWT token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/attendance/validate-location": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Checks if the employee's GPS coordinates fall within the company's configured office geofence.\nGPS accuracy must be ≤ 50 meters. Mock/fake GPS locations are rejected.\nCall this before clock-in to verify the employee is at the office.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Attendance"
+                ],
+                "summary": "Validate employee GPS location against office geofence",
+                "parameters": [
+                    {
+                        "description": "Employee GPS coordinates",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.ValidateLocationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Location validation result",
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.ValidateLocationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request body",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid JWT token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Mock/fake GPS location detected",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "422": {
+                        "description": "GPS accuracy too low (\u003e50m) or office location not configured",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
-                "description": "Endpoint untuk mendapatkan JWT Token dengan verifikasi password",
+                "description": "Authenticate using password plus one of: employee_id, email, or phone_number.\nProvide exactly one identifier field alongside the password. Returns a JWT token on success.",
                 "consumes": [
                     "application/json"
                 ],
@@ -25,10 +517,10 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Login menggunakan Employee ID dan Password",
+                "summary": "Login with Employee ID, Email, or Phone Number",
                 "parameters": [
                     {
-                        "description": "Payload Login",
+                        "description": "Login credentials (one identifier + password)",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -39,21 +531,21 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Berhasil login, mengembalikan token",
+                        "description": "Login successful, returns JWT token",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "Bad Request (Format JSON salah)",
+                        "description": "No identifier provided (need employee_id, email, or phone_number)",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "401": {
-                        "description": "Unauthorized (Kredensial salah)",
+                        "description": "Account not found or wrong password",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -64,7 +556,7 @@
         },
         "/auth/otp/request": {
             "post": {
-                "description": "Endpoint untuk mengirimkan 6 digit OTP ke email yang terdaftar",
+                "description": "Sends a 6-digit OTP code to the registered email address. OTP expires after 5 minutes.",
                 "consumes": [
                     "application/json"
                 ],
@@ -74,10 +566,10 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Meminta kode OTP via Email",
+                "summary": "Request a 6-digit OTP via email",
                 "parameters": [
                     {
-                        "description": "Payload Request OTP",
+                        "description": "Email address",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -88,21 +580,21 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OTP berhasil dikirim",
+                        "description": "OTP sent successfully",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request body or email format",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "401": {
-                        "description": "Email tidak terdaftar",
+                        "description": "Email is not registered",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -113,7 +605,7 @@
         },
         "/auth/otp/verify": {
             "post": {
-                "description": "Endpoint untuk memvalidasi OTP dan mengembalikan JWT Token",
+                "description": "Validates the 6-digit OTP code and returns a JWT token on success. OTP is single-use and expires after 5 minutes.",
                 "consumes": [
                     "application/json"
                 ],
@@ -123,10 +615,10 @@
                 "tags": [
                     "Auth"
                 ],
-                "summary": "Verifikasi kode OTP dan Dapatkan Token",
+                "summary": "Verify OTP and get JWT token",
                 "parameters": [
                     {
-                        "description": "Payload Verify OTP",
+                        "description": "Email and OTP code",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -137,21 +629,156 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Berhasil verifikasi, mengembalikan token",
+                        "description": "OTP verified, returns JWT token",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Invalid request body",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
                         }
                     },
                     "401": {
-                        "description": "OTP salah atau kadaluarsa",
+                        "description": "Invalid or expired OTP",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/employee/profile": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the profile of the currently authenticated employee: name, email, role, profile picture, and company info.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Employee"
+                ],
+                "summary": "Get authenticated employee profile",
+                "responses": {
+                    "200": {
+                        "description": "Employee profile",
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.EmployeeProfileResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid JWT token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Employee not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/register": {
+            "post": {
+                "description": "Endpoint untuk mendaftarkan karyawan baru ke dalam sistem HRIS. Membutuhkan Company Code yang valid. Employee ID akan di-generate otomatis.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Employee"
+                ],
+                "summary": "Mendaftarkan karyawan baru",
+                "parameters": [
+                    {
+                        "description": "Payload Registrasi Karyawan",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Berhasil mendaftarkan karyawan",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request (validasi gagal)",
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict (email atau phone sudah terdaftar)",
+                        "schema": {
+                            "$ref": "#/definitions/hris-backend_internal_domain.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/time": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the current server time in RFC3339 format with timezone offset.\nUsed by mobile clients to anchor offline clock-out timestamp reconstruction.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Utility"
+                ],
+                "summary": "Get current server time",
+                "responses": {
+                    "200": {
+                        "description": "Server time in RFC3339 format",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid JWT token",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -162,18 +789,265 @@
         }
     },
     "definitions": {
-        "hris-backend_internal_domain.LoginRequest": {
+        "hris-backend_internal_domain.BreakRequest": {
             "type": "object",
             "required": [
-                "employee_id",
-                "password"
+                "action"
             ],
             "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "start",
+                        "end"
+                    ],
+                    "example": "start"
+                }
+            }
+        },
+        "hris-backend_internal_domain.BreakResponse": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "start",
+                        "end"
+                    ],
+                    "example": "start"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "clocked_in",
+                        "on_break"
+                    ],
+                    "example": "on_break"
+                },
+                "timestamp": {
+                    "type": "string",
+                    "example": "2026-03-12T12:00:00Z"
+                }
+            }
+        },
+        "hris-backend_internal_domain.ClockInRequest": {
+            "type": "object",
+            "required": [
+                "latitude",
+                "longitude",
+                "selfie_url"
+            ],
+            "properties": {
+                "latitude": {
+                    "type": "number",
+                    "example": -6.2088
+                },
+                "longitude": {
+                    "type": "number",
+                    "example": 106.8456
+                },
+                "notes": {
+                    "type": "string",
+                    "example": "Working from office today"
+                },
+                "selfie_url": {
+                    "type": "string",
+                    "example": "https://res.cloudinary.com/xxx/image/upload/selfie.jpg"
+                }
+            }
+        },
+        "hris-backend_internal_domain.ClockInResponse": {
+            "type": "object",
+            "properties": {
+                "clock_in_at": {
+                    "type": "string",
+                    "example": "2026-03-12T08:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "clocked_in"
+                    ],
+                    "example": "clocked_in"
+                }
+            }
+        },
+        "hris-backend_internal_domain.ClockOutPreview": {
+            "type": "object",
+            "properties": {
+                "current_time": {
+                    "type": "string",
+                    "example": "2026-03-12T17:30:00Z"
+                },
+                "overtime_minutes": {
+                    "type": "integer",
+                    "example": 30
+                },
+                "scheduled_clock_out_at": {
+                    "type": "string",
+                    "example": "2026-03-12T17:00:00Z"
+                },
+                "working_minutes": {
+                    "type": "integer",
+                    "example": 480
+                }
+            }
+        },
+        "hris-backend_internal_domain.ClockOutRequest": {
+            "type": "object",
+            "properties": {
+                "client_timestamp": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                }
+            }
+        },
+        "hris-backend_internal_domain.ClockOutResponse": {
+            "type": "object",
+            "properties": {
+                "clock_out_at": {
+                    "type": "string",
+                    "example": "2026-03-12T17:30:00Z"
+                },
+                "is_offline_submission": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "overtime_minutes": {
+                    "type": "integer",
+                    "example": 30
+                },
+                "status": {
+                    "type": "string",
+                    "enum": [
+                        "clocked_out"
+                    ],
+                    "example": "clocked_out"
+                },
+                "working_minutes": {
+                    "type": "integer",
+                    "example": 480
+                }
+            }
+        },
+        "hris-backend_internal_domain.CompanyProfileData": {
+            "type": "object",
+            "properties": {
+                "company_code": {
+                    "type": "string"
+                },
+                "company_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "hris-backend_internal_domain.EmployeeProfileResponse": {
+            "type": "object",
+            "properties": {
+                "company": {
+                    "$ref": "#/definitions/hris-backend_internal_domain.CompanyProfileData"
+                },
+                "email": {
+                    "type": "string"
+                },
                 "employee_id": {
                     "type": "string"
                 },
-                "password": {
+                "first_name": {
                     "type": "string"
+                },
+                "last_name": {
+                    "type": "string"
+                },
+                "profile_picture": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "hris-backend_internal_domain.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "errors": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "hris-backend_internal_domain.LoginRequest": {
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "john@company.com"
+                },
+                "employee_id": {
+                    "type": "string",
+                    "example": "GOTO-2026-0001"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "secret123"
+                },
+                "phone_number": {
+                    "type": "string",
+                    "example": "08123456789"
+                }
+            }
+        },
+        "hris-backend_internal_domain.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "company_code",
+                "email",
+                "is_tnc_accepted",
+                "password",
+                "phone_number"
+            ],
+            "properties": {
+                "company_code": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "is_tnc_accepted": {
+                    "type": "boolean"
+                },
+                "password": {
+                    "type": "string",
+                    "minLength": 6
+                },
+                "phone_number": {
+                    "type": "string"
+                }
+            }
+        },
+        "hris-backend_internal_domain.RegisterSelfieRequest": {
+            "type": "object",
+            "required": [
+                "selfie_url"
+            ],
+            "properties": {
+                "selfie_url": {
+                    "type": "string",
+                    "example": "https://res.cloudinary.com/xxx/image/upload/selfie.jpg"
                 }
             }
         },
@@ -184,7 +1058,104 @@
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "john@company.com"
+                }
+            }
+        },
+        "hris-backend_internal_domain.SelfieStatusResponse": {
+            "type": "object",
+            "properties": {
+                "registered_at": {
+                    "type": "string",
+                    "example": "2026-03-12T08:00:00Z"
+                },
+                "selfie_url": {
+                    "type": "string",
+                    "example": "https://res.cloudinary.com/xxx/image/upload/selfie.jpg"
+                }
+            }
+        },
+        "hris-backend_internal_domain.TodayStatusResponse": {
+            "type": "object",
+            "properties": {
+                "attendance_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "clock_in_at": {
+                    "type": "string",
+                    "example": "2026-03-12T08:00:00Z"
+                },
+                "clock_out_at": {
+                    "type": "string",
+                    "example": "2026-03-12T17:00:00Z"
+                },
+                "is_on_break": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "notes": {
+                    "type": "string",
+                    "example": "Working from office today"
+                },
+                "open_break_start_at": {
+                    "type": "string",
+                    "example": "2026-03-12T12:00:00Z"
+                },
+                "status": {
+                    "description": "Status represents the current attendance state of the employee for today.",
+                    "type": "string",
+                    "enum": [
+                        "idle",
+                        "clocked_in",
+                        "on_break",
+                        "clocked_out"
+                    ],
+                    "example": "clocked_in"
+                }
+            }
+        },
+        "hris-backend_internal_domain.ValidateLocationRequest": {
+            "type": "object",
+            "required": [
+                "accuracy_meters",
+                "latitude",
+                "longitude"
+            ],
+            "properties": {
+                "accuracy_meters": {
+                    "type": "number",
+                    "example": 10.5
+                },
+                "is_mock_location": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "latitude": {
+                    "type": "number",
+                    "example": -6.2088
+                },
+                "longitude": {
+                    "type": "number",
+                    "example": 106.8456
+                }
+            }
+        },
+        "hris-backend_internal_domain.ValidateLocationResponse": {
+            "type": "object",
+            "properties": {
+                "allowed_radius_meters": {
+                    "type": "number",
+                    "example": 100
+                },
+                "distance_meters": {
+                    "type": "number",
+                    "example": 45.2
+                },
+                "is_inside_geofence": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -196,10 +1167,12 @@
             ],
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "john@company.com"
                 },
                 "otp": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "123456"
                 }
             }
         }
