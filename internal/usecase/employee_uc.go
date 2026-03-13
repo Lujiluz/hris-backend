@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type employeeUsecase struct {
@@ -80,6 +81,29 @@ func (uc *employeeUsecase) Register(ctx context.Context, req *domain.RegisterReq
 		return mapCreateEmployeeError(err)
 	}
 	return nil
+}
+
+func (uc *employeeUsecase) GetProfile(ctx context.Context, employeeID string) (*domain.EmployeeProfileResponse, error) {
+	employee, err := uc.employeeRepo.GetProfileByEmployeeID(ctx, employeeID)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.ErrEmployeeNotFound
+		}
+		return nil, err
+	}
+
+	return &domain.EmployeeProfileResponse{
+		EmployeeID:     employee.EmployeeID,
+		FirstName:      employee.FirstName,
+		LastName:       employee.LastName,
+		Email:          employee.Email,
+		Role:           employee.Role,
+		ProfilePicture: employee.ProfilePicture,
+		Company: domain.CompanyProfileData{
+			CompanyName: employee.Company.CompanyName,
+			CompanyCode: employee.Company.CompanyCode,
+		},
+	}, nil
 }
 
 // mapCreateEmployeeError translates PostgreSQL unique constraint violations

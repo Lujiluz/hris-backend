@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"gorm.io/gorm"
 )
 
 type MockSequenceRepo struct {
@@ -147,6 +148,69 @@ func TestIsDisposableEmail(t *testing.T) {
 			assert.Equal(t, tt.expected, domain.IsDisposableEmail(tt.email))
 		})
 	}
+}
+
+func TestGetProfile(t *testing.T) {
+	profilePic := "https://res.cloudinary.com/dmvot15pm/image/upload/v1773207988/attendance/selfies/public_id_12345.png"
+	firstName := "Budi"
+	lastName := "Santoso"
+
+	mockEmployee := &domain.Employee{
+		EmployeeID:     "ARYA-2026-0001",
+		FirstName:      &firstName,
+		LastName:       &lastName,
+		Email:          "budi@gmail.com",
+		Role:           "staff",
+		ProfilePicture: profilePic,
+		Company: domain.Company{
+			CompanyName: "Arya Corp",
+			CompanyCode: "ARYA",
+		},
+	}
+
+	t.Run("Success", func(t *testing.T) {
+		mockEmp := new(MockEmployeeRepo)
+		mockEmp.On("GetProfileByEmployeeID", mock.Anything, "ARYA-2026-0001").Return(mockEmployee, nil)
+
+		uc := usecase.NewEmployeeUsecase(nil, mockEmp, nil)
+		resp, err := uc.GetProfile(context.Background(), "ARYA-2026-0001")
+
+		assert.NoError(t, err)
+		assert.Equal(t, "ARYA-2026-0001", resp.EmployeeID)
+		assert.Equal(t, &firstName, resp.FirstName)
+		assert.Equal(t, &lastName, resp.LastName)
+		assert.Equal(t, "budi@gmail.com", resp.Email)
+		assert.Equal(t, "staff", resp.Role)
+		assert.Equal(t, profilePic, resp.ProfilePicture)
+		assert.Equal(t, "Arya Corp", resp.Company.CompanyName)
+		assert.Equal(t, "ARYA", resp.Company.CompanyCode)
+		mockEmp.AssertExpectations(t)
+	})
+
+	t.Run("Not found", func(t *testing.T) {
+		mockEmp := new(MockEmployeeRepo)
+		mockEmp.On("GetProfileByEmployeeID", mock.Anything, "UNKNOWN").Return(nil, gorm.ErrRecordNotFound)
+
+		uc := usecase.NewEmployeeUsecase(nil, mockEmp, nil)
+		resp, err := uc.GetProfile(context.Background(), "UNKNOWN")
+
+		assert.Nil(t, resp)
+		assert.ErrorIs(t, err, domain.ErrEmployeeNotFound)
+		mockEmp.AssertExpectations(t)
+	})
+
+	t.Run("DB error", func(t *testing.T) {
+		mockEmp := new(MockEmployeeRepo)
+		dbErr := errors.New("connection lost")
+		mockEmp.On("GetProfileByEmployeeID", mock.Anything, "ARYA-2026-0001").Return(nil, dbErr)
+
+		uc := usecase.NewEmployeeUsecase(nil, mockEmp, nil)
+		resp, err := uc.GetProfile(context.Background(), "ARYA-2026-0001")
+
+		assert.Nil(t, resp)
+		assert.ErrorIs(t, err, dbErr)
+		mockEmp.AssertExpectations(t)
+	})
 }
 
 func TestRegister(t *testing.T) {
