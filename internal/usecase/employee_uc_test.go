@@ -55,6 +55,13 @@ func (m *MockEmployeeRepo) RegisterSelfie(ctx context.Context, employeeID string
 	args := m.Called(ctx, employeeID, selfieURL)
 	return args.Error(0)
 }
+func (m *MockEmployeeRepo) GetProfileByEmployeeID(ctx context.Context, employeeID string) (*domain.Employee, error) {
+	args := m.Called(ctx, employeeID)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*domain.Employee), args.Error(1)
+}
 
 type MockCompanyRepo struct {
 	mock.Mock

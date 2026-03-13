@@ -19,6 +19,9 @@ type Employee struct {
 	Role                string         `gorm:"type:varchar(50);default:'staff'" json:"role" enums:"staff,admin" example:"staff"`
 	SelfieURL           *string        `gorm:"type:text" json:"selfie_url,omitempty"`
 	SelfieRegisteredAt  *time.Time     `json:"selfie_registered_at,omitempty"`
+	FirstName           *string        `gorm:"type:varchar(100)" json:"first_name"`
+	LastName            *string        `gorm:"type:varchar(100)" json:"last_name"`
+	ProfilePicture      string         `gorm:"type:text;not null;default:'https://res.cloudinary.com/dmvot15pm/image/upload/v1773207988/attendance/selfies/public_id_12345.png'" json:"profile_picture"`
 	CreatedAt           time.Time      `json:"created_at"`
 	UpdatedAt           time.Time      `json:"updated_at"`
 	DeletedAt           gorm.DeletedAt `gorm:"index" json:"-"`
@@ -35,6 +38,7 @@ type EmployeeSequenceRepository interface {
 type EmployeeUsecase interface {
 	GenerateEmployeeID(ctx context.Context, companyID string, companyCode string) (string, error)
 	Register(ctx context.Context, req *RegisterRequest) error
+	GetProfile(ctx context.Context, employeeID string) (*EmployeeProfileResponse, error)
 }
 
 type RegisterRequest struct {
@@ -62,6 +66,21 @@ type LoginRequest struct {
 	Password    string `json:"password" binding:"required" example:"secret123"`
 }
 
+type EmployeeProfileResponse struct {
+	EmployeeID     string             `json:"employee_id"`
+	FirstName      *string            `json:"first_name"`
+	LastName       *string            `json:"last_name"`
+	Email          string             `json:"email"`
+	Role           string             `json:"role"`
+	ProfilePicture string             `json:"profile_picture"`
+	Company        CompanyProfileData `json:"company"`
+}
+
+type CompanyProfileData struct {
+	CompanyName string `json:"company_name"`
+	CompanyCode string `json:"company_code"`
+}
+
 type AuthUsecase interface {
 	RequestOTP(ctx context.Context, req *RequestOTPRequest) error
 	VerifyOTP(ctx context.Context, req *VerifyOTPRequest) (string, error)
@@ -77,6 +96,7 @@ type OTPRepository interface {
 var (
 	ErrSelfieAlreadyRegistered = errors.New("selfie already registered for this employee")
 	ErrSelfieNotRegistered     = errors.New("no selfie registered for this employee")
+	ErrEmployeeNotFound        = errors.New("employee not found")
 )
 
 // Employee interfaces
@@ -86,6 +106,9 @@ type EmployeeRepository interface {
 	GetByEmployeeID(ctx context.Context, employeeID string) (*Employee, error)
 	GetByPhoneNumber(ctx context.Context, phoneNumber string) (*Employee, error)
 	RegisterSelfie(ctx context.Context, employeeID string, selfieURL string) error
+	// GetProfileByEmployeeID fetches an employee with Company preloaded.
+	// Kept separate from GetByEmployeeID to avoid a JOIN on the auth/attendance hot path.
+	GetProfileByEmployeeID(ctx context.Context, employeeID string) (*Employee, error)
 }
 
 type CompanyRepository interface {
