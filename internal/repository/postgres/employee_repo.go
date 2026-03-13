@@ -59,3 +59,15 @@ func (r *employeeRepo) RegisterSelfie(ctx context.Context, employeeID string, se
 			"selfie_registered_at": now,
 		}).Error
 }
+
+func (r *employeeRepo) GetProfileByEmployeeID(ctx context.Context, employeeID string) (*domain.Employee, error) {
+	var employee domain.Employee
+	err := r.db.WithContext(ctx).
+		Preload("Company").
+		Where("employee_id = ?", employeeID).
+		First(&employee).Error
+	if err != nil {
+		return nil, err
+	}
+	return &employee, nil
+}
